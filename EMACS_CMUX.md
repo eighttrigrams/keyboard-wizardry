@@ -237,3 +237,96 @@ Avoid unless you really want it.
 | Ghostty config   | `~/Library/Application Support/com.mitchellh.ghostty/config.ghostty`|
 | cmux shortcuts   | `~/.config/cmux/settings.json`                                      |
 | cmux NSMenu      | `~/Library/Preferences/com.cmuxterm.app.plist`                      |
+
+---
+
+## Gotchas learned the hard way
+
+### `cmux reload-config` does NOT reload Ghostty's config
+
+`cmux reload-config` only reloads cmux's own settings (`settings.json`).
+Changes to `config.ghostty` require a full cmux restart (`Cmd+Q` then
+relaunch). Symptom of skipping this: a freshly added Ghostty `keybind`
+silently has no effect — pressing the key produces the macOS-Option dead-
+key character (e.g. `˚` `ˆ`) instead of reaching the terminal.
+
+### `use-package :bind` only adds, never removes
+
+Re-running `M-x load-file ~/.emacs.d/init.el` after deleting a `:bind`
+entry leaves the old binding in the keymap. Either restart Emacs or
+explicitly null the key (`(define-key paredit-mode-map (kbd "s-i") nil)`).
+This bites whenever you migrate a binding from one key to another and
+forget the old one is still live.
+
+### Modifier bitmask for CSI u (kitty keyboard protocol)
+
+Modifiers are encoded as `bitmask + 1`. The bits:
+
+| Modifier | Bit |
+|----------|-----|
+| shift    | 1   |
+| alt      | 2   |
+| ctrl     | 4   |
+| super    | 8   |
+
+So `ctrl+alt` = `4+2+1 = 7` → `\x1b[<code>;7u`. `super` alone = `8+1 = 9`.
+
+### Layout-independent physical keys
+
+Ghostty supports a `physical:` modifier inside the trigger to bind by
+hardware position (W3C UI Events key code) regardless of keyboard layout.
+The valid syntax in current Ghostty is the bare key name without the
+prefix — e.g. `keybind = alt+equal=text:\x1b\x3d` matches the physical `=`
+key (which on a German Mac produces `´`). Variants like
+`physical:alt+equal=…` or `alt+physical:equal=…` fail to validate with
+`error.InvalidFormat` in this Ghostty version.
+
+### Wire-form trick `alt+X=esc:X`
+
+For Meta-modified keys, you don't need KKP at all. The classic `ESC <char>`
+wire form has decoded to `M-<char>` since the dawn of time. So
+`keybind = alt+i=esc:i` makes Option+i deliver `M-i` to Emacs — useful for
+binding letter+option combos in `paredit-mode-map`. (Avoid for keys whose
+literal `<char>` is `=`, since the parser chokes — use `text:\x1b\x3d`
+instead of `esc:=`.)
+
+### Driving keybinds via `cmux send-key` from a script: don't bother
+
+`cmux send-key cmd+k` is a no-op — modifiers like Cmd don't traverse the
+PTY, and `send-key` bypasses Ghostty's CSI u keybind layer. Injecting the
+raw CSI u sequence via `cmux send "$(printf '\x1b[107;9u')"` also fails:
+the bytes hit the PTY but Emacs's `input-decode-map` doesn't decode them
+(the CSI u handlers are installed only by KKP's live negotiation with the
+real terminal frame, not for arbitrary writes). Workaround for testing
+from CLI: call the function directly with `M-x paredit-forward-down`
+rather than the keystroke.
+
+### Bind by Unicode codepoint, not physical key name
+
+When a physical key name (`grave_accent`, `intl_backslash`) doesn't match
+your layout — common with custom Ukulele layouts like *German No
+Deadkeys* — bind by the literal character that the keypress produces:
+
+```
+keybind = ^=text:\x1f       # the '^' key  → C-/  (undo)
+keybind = °=text:\x18\x1f   # shift+^      → C-x C-_  (redo)
+```
+
+This is the layout-aware path: Ghostty matches whatever Unicode codepoint
+your OS-level layout emits for that physical key, no matter where it
+sits on the hardware. Especially useful for shifted variants — *don't*
+write `shift+^=…`, write the actual shifted character (`°`, `é`, `ö`,
+etc.) as the trigger.
+
+### `\x1f` decodes as `C-_` in Emacs, not `C-/`
+
+These are nominally aliases (both have control-bit-zero of `_`), but
+emacs's keymap lookup treats them as distinct entries. So
+`(global-set-key (kbd "C-x C-/") 'undo-redo)` will *not* fire when the
+terminal sends `\x18\x1f` — emacs reports `C-x C-_ is undefined`. Bind
+both forms when wiring a redo-style key over the wire:
+
+```elisp
+(global-set-key (kbd "C-x C-/") 'undo-redo)
+(global-set-key (kbd "C-x C-_") 'undo-redo)
+```

@@ -8,6 +8,10 @@
 - cmd+l cursor right
 - option+j wordwise backward
 - option+l wordwise forward
+- ^ - undo
+- shift+^ - redo
+- cmd+9 - save
+- cmd+0 cmd+0 - save all and exit
 
 # Structured LISP editing:
 
@@ -17,6 +21,8 @@
 - option+l - paredit forward
 - control+option+i - backward up list
 - control+option+k - backward down list
+- option+delete - kill form leftward (backward-kill-sexp)
+- option+´ - kill form rightward (kill-sexp)
 
 # VSCode
 
@@ -30,7 +36,9 @@ ln -sf ~/Workspace/eighttrigrams/keyboard-wizardry/vscode/keybindings.json ~/Lib
 
 Config is at `/Users/daniel/.emacs.d/init.el`.
 
-Quit with `C-x C-c`.
+Save current buffer: `C-x C-s`.
+Quit (prompts to save modified buffers): `C-x C-c`.
+Save-all then quit in one go: `C-x s` (answer `!` to save all), then `C-x C-c`.
 
 Reload with `Esc` then `x` (becomes `M-x` somehow) the `load-file`, Enter then `~/.emacs.d/init.el`, Enter.
 `Ctrl+g` to go back to editor.
