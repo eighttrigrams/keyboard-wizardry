@@ -109,6 +109,22 @@ Validate the config:
 ghostty +validate-config
 ```
 
+### 2b. Option+key → Meta wire form (no KKP needed)
+
+For Option-modified keys you can skip the whole CSI u dance by emitting the
+classic `ESC <char>` wire form, which Emacs has decoded as `M-<char>` since
+forever. Example — bind `Option+J` and `Option+L` to `backward-word` /
+`forward-word`:
+
+```
+keybind = alt+j=esc:b
+keybind = alt+l=esc:f
+```
+
+`esc:b` sends `ESC` then `b`, which Emacs reads as `M-b` (`backward-word`,
+a built-in). No `init.el` change required. Same trick works for any
+`M-<letter>` binding you can think of.
+
 ---
 
 ## 3. cmux side — `settings.json` shortcut overrides
