@@ -1,0 +1,17 @@
+keycode 13 = 4 dollar EuroSign EuroSign EuroSign EuroSign EuroSign EuroSign
+keycode 16 = 7 slash NoSymbol NoSymbol bar backslash NoSymbol NoSymbol
+keycode 38 = a A NoSymbol NoSymbol NoSymbol NoSymbol NoSymbol NoSymbol
+keycode 39 = s S NoSymbol NoSymbol bracketleft NoSymbol NoSymbol NoSymbol
+keycode 40 = d D backslash backslash bar NoSymbol NoSymbol NoSymbol
+keycode 41 = f F NoSymbol NoSymbol bracketright NoSymbol NoSymbol NoSymbol
+keycode 42 = g G NoSymbol NoSymbol NoSymbol NoSymbol NoSymbol NoSymbol
+keycode 24 = q Q NoSymbol NoSymbol at NoSymbol NoSymbol NoSymbol
+keycode 25 = w W NoSymbol NoSymbol braceleft NoSymbol NoSymbol NoSymbol
+keycode 26 = e E NoSymbol NoSymbol backslash NoSymbol NoSymbol NoSymbol
+keycode 27 = r R NoSymbol NoSymbol braceright NoSymbol NoSymbol NoSymbol
+
+keycode 56 = b B NoSymbol NoSymbol asciitilde NoSymbol NoSymbol NoSymbol
+keycode 94 = less greater NoSymbol NoSymbol asciicircum NoSymbol NoSymbol NoSymbol
+
+keycode 134 = ISO_Level3_Shift NoSymbol NoSymbol NoSymbol NoSymbol
+

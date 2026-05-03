@@ -1,0 +1,144 @@
+{
+	"[clojure]": {
+		"editor.wordSeparators": "\t ()\"':,;~@#$%^&{}[]`-_<>/.",
+		"editor.autoClosingBrackets": "always",
+		"editor.autoClosingQuotes": "always",
+		"editor.formatOnType": true,
+		"editor.autoIndent": "full",
+		"editor.formatOnPaste": true,
+		"files.trimTrailingWhitespace": false,
+		"editor.matchBrackets": "never",
+		"editor.renderIndentGuides": false,
+		"editor.parameterHints.enabled": false,
+		"editor.guides.indentation": false,
+		"editor.defaultFormatter": "betterthantomorrow.calva"
+	},
+	"macros": {
+		"commentLine": [
+			"editor.action.commentLine",
+			"cursorDown"
+		],
+		"gotoTopLevel": [
+			"paredit.rangeForDefun",
+			"paredit.backwardSexp",
+			"paredit.forwardSexp",
+			"paredit.forwardSexp",
+			"paredit.backwardSexp",
+			"center-editor-window.center"
+		],
+		"scrollDownAndNextLine": [{
+		    "command": "editorScroll",
+		    "args":
+		    {
+	        	"to": "down",
+		        "by": "line",
+	        	"revealCursor": true
+		    }
+		},
+		"cursorDown"
+		],
+		"scrollUpAndNextLine": [{
+		    "command": "editorScroll",
+		    "args":
+		    {
+	        	"to": "up",
+		        "by": "line",
+	        	"revealCursor": true
+		    }
+		},
+		"cursorUp"
+		],
+		"pgDown": [
+			"cursorPageDown",
+			{"command": "cursorMove",
+                        "args": {
+                          "to": "viewPortCenter"
+			}}
+		],	"pgUp": [
+			"cursorPageUp",
+			{"command": "cursorMove",
+                        "args": {
+                          "to": "viewPortCenter"
+			}}
+		]
+	},
+	"window.titleBarStyle": "custom",
+	"window.customMenuBarAltFocus": false,
+	"calva.paredit.defaultKeyMap": "strict",
+	"window.enableMenuBarMnemonics": false,
+	"calva.displayDiagnostics": false,
+	"calva.enableJSCompletions": false,
+	"workbench.startupEditor": "newUntitledFile",
+	"calva.prettyPrintingOptions": {
+		"enabled": true,
+		"printEngine": "pprint",
+		"width": 120,
+		"maxLength": 50
+	},
+	"javascript.format.insertSpaceAfterOpeningAndBeforeClosingNonemptyParenthesis": true,
+	"javascript.format.insertSpaceAfterOpeningAndBeforeClosingNonemptyBrackets": true,
+	"javascript.preferences.quoteStyle": "single",
+	"typescript.preferences.quoteStyle": "single",
+	"eslint.alwaysShowStatus": true,
+	"eslint.format.enable": true,
+	"eslint.debug": true,
+	"eslint.run": "onSave",
+	"prettier.arrowParens": "avoid",
+	"prettier.singleQuote": true,
+	"[typescript]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode"
+	},
+	"typescript.format.enable": false,
+	"editor.multiCursorModifier": "ctrlCmd",
+	"extensions.ignoreRecommendations": true,
+	"[markdown]": {
+		"editor.wordWrap": "on",
+		"editor.quickSuggestions": {
+			"comments": "off",
+			"strings": "off",
+			"other": "off"
+		}
+	},
+	"security.workspace.trust.untrustedFiles": "open",
+	"[elixir]": {
+		"editor.detectIndentation": false,
+		"editor.tabSize": 2
+	},
+	"explorer.confirmDelete": false,
+	"typescript.format.insertSpaceAfterOpeningAndBeforeClosingTemplateStringBraces": true,
+	"typescript.updateImportsOnFileMove.enabled": "always",
+	"editor.formatOnSaveMode": "modifications",
+	"workbench.iconTheme": "material-icon-theme",
+	"editor.quickSuggestionsDelay": 100,
+	"calva.fmt.keepCommentTrailParenOnOwnLine": false,
+	"editor.minimap.enabled": false,
+	"calva.customREPLCommandSnippets": [
+		{
+			"name": "(user/reset)",
+			"ns": "user",
+			"snippet": "(reset)"
+		},
+		{
+			"name": "(add-tap (bound-fn* clojure.pprint/pprint))",
+			"ns": "user",
+			"snippet": "(add-tap (bound-fn* clojure.pprint/pprint))"
+		},
+		{
+			"name": "(t/run-all-tests (re-pattern (.toString *ns*)))",
+			"snippet": "(t/run-all-tests (re-pattern (.toString *ns*)))"
+		}
+	],
+	"update.mode": "manual",
+	"workbench.editor.wrapTabs": true,
+	"workbench.editor.tabCloseButton": "off",
+	"calva.definitionProviderPriority": [
+		"lsp",
+		"repl"
+	],
+	"workbench.colorTheme": "Solarized Light",
+	"calva.autoOpenJackInTerminal": false,
+	"workbench.sideBar.location": "right",
+	"window.zoomLevel": 1,
+	"workbench.editor.empty.hint": "hidden",
+	"workbench.editor.tabActionCloseVisibility": false
+}
