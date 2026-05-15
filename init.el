@@ -59,8 +59,8 @@
       (lambda (_window buffer _bury-or-kill)
         (not (buffer-file-name buffer))))
 
-(global-set-key (kbd "C-u") 'previous-buffer)
-(global-set-key (kbd "C-o") 'next-buffer)
+(bind-key* "s-u" 'previous-buffer)
+(bind-key* "s-o" 'next-buffer)
 
 (defvar kw/layout-bookmarks nil
   "List of (ABS-PATH LINE DESCRIPTION-OR-NIL) for the current layout, in order.")
