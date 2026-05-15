@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ $# -lt 1 ]; then
+  echo "usage: emacs-el <layout-name> [emacs-args...]" >&2
+  exit 2
+fi
+
+layout="$1"
+shift
+
+file=".editor-layouts.json"
+if [ ! -f "$file" ]; then
+  echo "emacs-el: no $file in $(pwd)" >&2
+  exit 1
+fi
+
+base="$(pwd)"
+mapfile -t paths < <(jq -r --arg n "$layout" '
+  (map(select(.name == $n)) | first)
+  // error("layout not found: " + $n)
+  | .editors[].path
+' "$file")
+
+bookmarks_elisp=$(jq -r --arg n "$layout" --arg base "$base" '
+  def esc: gsub("\\\\"; "\\\\") | gsub("\""; "\\\"") | gsub("\n"; "\\n");
+  (map(select(.name == $n)) | first) | .bookmarks
+  | map("(list \"" + $base + "/" + .filePath + "\" "
+        + (.line|tostring) + " "
+        + (if .description then "\"" + (.description|esc) + "\"" else "nil" end)
+        + ")")
+  | "(list " + join(" ") + ")"
+' "$file")
+
+elisp="(progn"
+first_abs=""
+for p in "${paths[@]}"; do
+  abs="$base/$p"
+  [ -z "$first_abs" ] && first_abs="$abs"
+  esc=${abs//\\/\\\\}
+  esc=${esc//\"/\\\"}
+  elisp+=" (find-file \"$esc\")"
+done
+esc_first=${first_abs//\\/\\\\}
+esc_first=${esc_first//\"/\\\"}
+elisp+=" (setq kw/layout-bookmarks $bookmarks_elisp)"
+elisp+=" (setq kw/bookmark-index -1)"
+elisp+=" (switch-to-buffer (find-file-noselect \"$esc_first\")) (delete-other-windows))"
+
+exec emacs --no-splash --eval "$elisp" "$@"
