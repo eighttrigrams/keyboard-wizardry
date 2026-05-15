@@ -42,3 +42,12 @@ Save-all then quit in one go: `C-x s` (answer `!` to save all), then `C-x C-c`.
 
 Reload with `Esc` then `x` (becomes `M-x` somehow) the `load-file`, Enter then `~/.emacs.d/init.el`, Enter.
 `Ctrl+g` to go back to editor.
+
+## Editor Layouts support
+
+- cmd+u cycle to next buffer leftwards
+- cmd+o cycle to next buffer rightwards
+- cmd+option+, cycle bookmarks leftwards
+- cmd+option+. cycle bookmarks rightwards
+
+call `emacs-el layout-name` in a directory which has `.editor-layouts` and a layout of that name defined.
