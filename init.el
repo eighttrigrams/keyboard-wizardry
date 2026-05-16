@@ -62,9 +62,69 @@
 (bind-key* "s-u" 'previous-buffer)
 (bind-key* "s-o" 'next-buffer)
 
+(global-display-line-numbers-mode 1)
+
 (defvar kw/layout-bookmarks nil
   "List of (ABS-PATH LINE DESCRIPTION-OR-NIL) for the current layout, in order.")
 (defvar kw/bookmark-index 0)
+(defvar kw/layout-file nil)
+(defvar kw/layout-name nil)
+
+(defun kw/save-bookmarks ()
+  (when (and kw/layout-file kw/layout-name (file-exists-p kw/layout-file))
+    (require 'json)
+    (let* ((json-object-type 'alist)
+           (json-array-type 'list)
+           (json-key-type 'symbol)
+           (data (json-read-file kw/layout-file))
+           (base (file-name-directory (expand-file-name kw/layout-file)))
+           (now (truncate (* 1000 (float-time))))
+           (new-bookmarks
+            (mapcar (lambda (bm)
+                      (let ((rel (file-relative-name (nth 0 bm) base))
+                            (line (nth 1 bm))
+                            (desc (nth 2 bm)))
+                        (append `((filePath . ,rel)
+                                  (line . ,line)
+                                  (timestamp . ,now))
+                                (when desc `((description . ,desc))))))
+                    kw/layout-bookmarks)))
+      (dolist (entry data)
+        (when (equal (alist-get 'name entry) kw/layout-name)
+          (let ((cell (assq 'bookmarks entry)))
+            (if cell
+                (setcdr cell new-bookmarks)
+              (nconc entry (list (cons 'bookmarks new-bookmarks)))))))
+      (with-temp-file kw/layout-file
+        (insert (json-encode data))
+        (json-pretty-print-buffer)))))
+
+(defun kw/setup-bookmark-margin ()
+  (setq left-margin-width 2)
+  (dolist (win (get-buffer-window-list (current-buffer) nil t))
+    (set-window-margins win 2 (cdr (window-margins win)))))
+
+(defun kw/apply-bookmark-overlays (buffer)
+  (with-current-buffer buffer
+    (kw/setup-bookmark-margin)
+    (remove-overlays (point-min) (point-max) 'kw/bookmark t)
+    (dolist (bm kw/layout-bookmarks)
+      (when (equal (nth 0 bm) (buffer-file-name))
+        (save-excursion
+          (goto-char (point-min))
+          (forward-line (nth 1 bm))
+          (let ((ov (make-overlay (line-beginning-position)
+                                  (line-beginning-position))))
+            (overlay-put ov 'kw/bookmark t)
+            (overlay-put ov 'before-string
+                         (propertize " " 'display
+                                     `((margin left-margin)
+                                       ,(propertize "●" 'face '(:foreground "yellow")))))))))))
+
+(defun kw/refresh-bookmark-overlays ()
+  (dolist (buf (buffer-list))
+    (when (buffer-file-name buf)
+      (kw/apply-bookmark-overlays buf))))
 
 (defun kw/goto-bookmark (i)
   (when kw/layout-bookmarks
@@ -88,6 +148,49 @@
 
 (global-set-key (kbd "s-M-,") 'kw/prev-bookmark)
 (global-set-key (kbd "s-M-.") 'kw/next-bookmark)
+
+(defun kw/toggle-bookmark ()
+  (interactive)
+  (let* ((path (buffer-file-name))
+         (line (1- (line-number-at-pos))))
+    (unless path (user-error "buffer has no file"))
+    (let ((existing (cl-find-if (lambda (bm)
+                                  (and (equal (nth 0 bm) path)
+                                       (= (nth 1 bm) line)))
+                                kw/layout-bookmarks)))
+      (if existing
+          (let ((new-desc (read-string "Bookmark description (empty to remove): "
+                                       (or (nth 2 existing) ""))))
+            (if (string-empty-p new-desc)
+                (progn
+                  (setq kw/layout-bookmarks (delq existing kw/layout-bookmarks))
+                  (message "bookmark removed"))
+              (setf (nth 2 existing) new-desc)
+              (message "bookmark renamed: %s" new-desc)))
+        (setq kw/layout-bookmarks
+              (append kw/layout-bookmarks (list (list path line nil))))
+        (message "bookmark added at line %d" (1+ line))))
+    (kw/refresh-bookmark-overlays)
+    (kw/save-bookmarks)))
+
+(bind-key* "s-M-m s-M-m" 'kw/toggle-bookmark)
+
+(defvar-local kw/last-bookmark-line nil)
+
+(defun kw/show-bookmark-at-point ()
+  (when (and kw/layout-bookmarks (buffer-file-name))
+    (let ((line (line-number-at-pos)))
+      (unless (eq line kw/last-bookmark-line)
+        (setq kw/last-bookmark-line line)
+        (let ((bm (cl-find-if (lambda (b)
+                                (and (equal (nth 0 b) (buffer-file-name))
+                                     (= (nth 1 b) (1- line))
+                                     (nth 2 b)))
+                              kw/layout-bookmarks)))
+          (when bm
+            (message "● %s" (nth 2 bm))))))))
+
+(add-hook 'post-command-hook 'kw/show-bookmark-at-point)
 
 (load-theme 'wombat t)
 (custom-set-variables

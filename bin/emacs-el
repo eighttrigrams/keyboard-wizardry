@@ -43,8 +43,15 @@ for p in "${paths[@]}"; do
 done
 esc_first=${first_abs//\\/\\\\}
 esc_first=${esc_first//\"/\\\"}
+layout_abs="$base/$file"
+esc_layout_abs=${layout_abs//\\/\\\\}; esc_layout_abs=${esc_layout_abs//\"/\\\"}
+esc_layout_name=${layout//\\/\\\\}; esc_layout_name=${esc_layout_name//\"/\\\"}
+
+elisp+=" (setq kw/layout-file \"$esc_layout_abs\")"
+elisp+=" (setq kw/layout-name \"$esc_layout_name\")"
 elisp+=" (setq kw/layout-bookmarks $bookmarks_elisp)"
 elisp+=" (setq kw/bookmark-index -1)"
+elisp+=" (kw/refresh-bookmark-overlays)"
 elisp+=" (switch-to-buffer (find-file-noselect \"$esc_first\")) (delete-other-windows))"
 
 exec emacs --no-splash --eval "$elisp" "$@"
