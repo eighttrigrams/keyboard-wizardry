@@ -12,6 +12,12 @@
 - shift+^ - redo
 - cmd+9 - save
 - cmd+0 cmd+0 - save all and exit
+- ctrl+option+cmd+p go to top
+- ctrl+option+cmd+ö go to bottom
+- option+cmd+i cursor up, scroll buffer 1 line down
+- option+cmd+k cursor down, scroll buffer 1 line up
+- option+ö center cursor vertically
+- ctrl-option+ö center current line vertically
 
 # Structured LISP editing:
 
@@ -49,5 +55,6 @@ Reload with `Esc` then `x` (becomes `M-x` somehow) the `load-file`, Enter then `
 - cmd+o cycle to next buffer rightwards
 - cmd+option+, cycle bookmarks leftwards
 - cmd+option+. cycle bookmarks rightwards
+- cmd+option+m,cmd+option+m - create/name/remove bookmark
 
 call `emacs-el layout-name` in a directory which has `.editor-layouts` and a layout of that name defined.

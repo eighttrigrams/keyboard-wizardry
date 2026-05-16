@@ -61,6 +61,37 @@
 
 (bind-key* "s-u" 'previous-buffer)
 (bind-key* "s-o" 'next-buffer)
+(bind-key* "s-ü" 'goto-line)
+(bind-key* "C-M-s-p" 'beginning-of-buffer)
+(bind-key* "C-M-s-ö" 'end-of-buffer)
+
+(defun kw/scroll-down-keep-row ()
+  (interactive)
+  (previous-line)
+  (scroll-down-line))
+
+(defun kw/scroll-up-keep-row ()
+  (interactive)
+  (next-line)
+  (scroll-up-line))
+
+(bind-key* "s-M-i" 'kw/scroll-down-keep-row)
+(bind-key* "s-M-k" 'kw/scroll-up-keep-row)
+
+(defun kw/recenter-keep-column ()
+  (interactive)
+  (let ((col (current-column)))
+    (recenter)
+    (move-to-column col)))
+
+(defun kw/cursor-to-middle ()
+  (interactive)
+  (let ((col (current-column)))
+    (move-to-window-line nil)
+    (move-to-column col)))
+
+(bind-key* "s-ö" 'kw/cursor-to-middle)
+(bind-key* "C-s-ö" 'kw/recenter-keep-column)
 
 (global-display-line-numbers-mode 1)
 
