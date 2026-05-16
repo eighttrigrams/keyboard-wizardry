@@ -93,6 +93,23 @@
 (bind-key* "s-ö" 'kw/cursor-to-middle)
 (bind-key* "C-s-ö" 'kw/recenter-keep-column)
 
+(defun kw/page-up-middle ()
+  (interactive)
+  (let ((col (current-column)))
+    (condition-case nil (scroll-down) (beginning-of-buffer nil))
+    (move-to-window-line nil)
+    (move-to-column col)))
+
+(defun kw/page-down-middle ()
+  (interactive)
+  (let ((col (current-column)))
+    (condition-case nil (scroll-up) (end-of-buffer nil))
+    (move-to-window-line nil)
+    (move-to-column col)))
+
+(bind-key* "s-M-p" 'kw/page-up-middle)
+(bind-key* "s-M-ö" 'kw/page-down-middle)
+
 (global-display-line-numbers-mode 1)
 
 (defvar kw/layout-bookmarks nil

@@ -18,6 +18,9 @@
 - option+cmd+k cursor down, scroll buffer 1 line up
 - option+ö center cursor vertically
 - ctrl-option+ö center current line vertically
+- cmd+p jump to line
+- option+cmd+i page up, w/ cursor centered vertically
+- option+cmd+k page down, w/ cursor centered vertically
 
 # Structured LISP editing:
 
