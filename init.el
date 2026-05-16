@@ -59,8 +59,56 @@
       (lambda (_window buffer _bury-or-kill)
         (not (buffer-file-name buffer))))
 
-(bind-key* "s-u" 'previous-buffer)
-(bind-key* "s-o" 'next-buffer)
+(defvar kw/layout-paths nil
+  "List of abs paths defining the cycling order for the current layout.")
+
+(defun kw/file-buffers ()
+  (if kw/layout-paths
+      (delq nil (mapcar #'get-file-buffer kw/layout-paths))
+    (sort (seq-filter #'buffer-file-name (buffer-list))
+          (lambda (a b) (string< (buffer-name a) (buffer-name b))))))
+
+(defun kw/cycle-buffer (dir)
+  (let* ((bufs (kw/file-buffers))
+         (n (length bufs)))
+    (when (> n 0)
+      (let* ((cur (current-buffer))
+             (idx (or (cl-position cur bufs) 0))
+             (next-idx (mod (+ idx dir) n)))
+        (switch-to-buffer (nth next-idx bufs))))))
+
+(defun kw/format-buffer-list (bufs cur width)
+  (let ((lines '()) (current "") (sep "  "))
+    (dolist (b bufs)
+      (let* ((name (file-name-nondirectory (buffer-file-name b)))
+             (display (if (eq b cur)
+                          (propertize (concat "[" name "]")
+                                      'face '(:foreground "yellow" :weight bold))
+                        name))
+             (candidate (if (string-empty-p current)
+                            display
+                          (concat current sep display))))
+        (if (and (> (length candidate) width)
+                 (not (string-empty-p current)))
+            (progn (push current lines) (setq current display))
+          (setq current candidate))))
+    (unless (string-empty-p current) (push current lines))
+    (string-join (nreverse lines) "\n")))
+
+(defun kw/show-buffer-list ()
+  (let* ((bufs (kw/file-buffers))
+         (cur (current-buffer))
+         (max-mini-window-height 0.5))
+    (message "%s" (kw/format-buffer-list bufs cur (- (frame-width) 2)))))
+
+(defun kw/next-file-buffer ()
+  (interactive) (kw/cycle-buffer 1) (kw/show-buffer-list))
+
+(defun kw/prev-file-buffer ()
+  (interactive) (kw/cycle-buffer -1) (kw/show-buffer-list))
+
+(bind-key* "s-u" 'kw/prev-file-buffer)
+(bind-key* "s-o" 'kw/next-file-buffer)
 (bind-key* "s-ü" 'goto-line)
 (bind-key* "C-M-s-p" 'beginning-of-buffer)
 (bind-key* "C-M-s-ö" 'end-of-buffer)
