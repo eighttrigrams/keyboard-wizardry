@@ -1,4 +1,68 @@
-macos-option-as-alt = true
-
+# Force-encode Cmd+i and Cmd+l as Kitty Keyboard Protocol CSI u sequences.
+# Ghostty doesn't auto-route these to the TTY for unbound super combinations,
+# so we explicitly emit the CSI u form that emacs+kkp can decode as s-i / s-l.
+#
+# Encoding:
+#   CSI <unicode codepoint> ; <modifiers> u
+#   modifiers value = bitmask + 1, where super = 8 → unmodified-super = 9
+#   105 = 'i'   →  \x1b[105;9u
+#   108 = 'l'   →  \x1b[108;9u
 keybind = performable:super+i=text:\x1b[105;9u
 keybind = performable:super+l=text:\x1b[108;9u
+keybind = performable:super+nine=text:\x1b[57;9u
+keybind = performable:super+zero=text:\x1b[48;9u
+
+# Word-wise cursor movement: Option+J / Option+L → emacs M-b / M-f
+# (backward-word / forward-word). esc:X sends ESC followed by X, which is
+# the standard "Meta-X" wire form that emacs decodes natively — no kkp
+# CSI u encoding needed for this case.
+keybind = alt+j=esc:b
+keybind = alt+l=esc:f
+keybind = alt+i=esc:i
+keybind = alt+k=esc:k
+
+# Ctrl+Option+I / Ctrl+Option+K → emacs C-M-i / C-M-k (paredit list navigation)
+# Modifier bitmask: ctrl(4) + alt(2) = 6, +1 = 7.
+keybind = performable:ctrl+alt+i=text:\x1b[105;7u
+keybind = performable:ctrl+alt+k=text:\x1b[107;7u
+
+# Cmd+Option+I / Cmd+Option+K → emacs s-M-i / s-M-k (scroll keeping cursor row).
+# Modifier bitmask: super(8) + alt(2) = 10, +1 = 11.
+keybind = performable:super+alt+i=text:\x1b[105;11u
+keybind = performable:super+alt+k=text:\x1b[107;11u
+
+# Cmd+Ö → emacs s-ö (move cursor to middle of window).
+# Codepoint 246 = 'ö', super-only modifier = 9.
+keybind = performable:super+ö=text:\x1b[246;9u
+
+# Ctrl+Cmd+Ö → emacs C-s-ö (recenter line under cursor to middle).
+# Modifier bitmask: ctrl(4) + super(8) = 12, +1 = 13.
+keybind = performable:ctrl+super+ö=text:\x1b[246;13u
+
+# Cmd+Option+P / Cmd+Option+Ö → emacs s-M-p / s-M-ö (page up/down, cursor to middle).
+# Modifier bitmask: super(8) + alt(2) = 10, +1 = 11.
+keybind = performable:super+alt+p=text:\x1b[112;11u
+keybind = performable:super+alt+ö=text:\x1b[246;11u
+
+# Ctrl+Cmd+J / Ctrl+Cmd+L → emacs C-s-j / C-s-l (drag sexp left/right).
+# Modifier bitmask: ctrl(4) + super(8) = 12, +1 = 13.
+keybind = performable:ctrl+super+j=text:\x1b[106;13u
+keybind = performable:ctrl+super+l=text:\x1b[108;13u
+
+# Form-wise deletion in lisp (paredit). Wire forms:
+#   Option+Delete  → ESC DEL  (emacs M-DEL)  → backward-kill-sexp
+#   Option+`=`     → ESC =    (emacs M-=)    → kill-sexp
+# physical:alt+equal binds the physical '=' key regardless of keyboard
+# layout (on a German Mac that key produces '´').
+keybind = alt+backspace=text:\x1b\x7f
+keybind = alt+equal=text:\x1b\x3d
+
+# Undo / redo on the IntlBackslash physical key (the '^' / '<>' key on
+# German layouts). Wire forms:
+#   intl_backslash        → C-/ (\x1f)        → emacs `undo`
+#   shift+intl_backslash  → C-x C-/ (\x18\x1f) → emacs `undo-redo` (bound in init.el)
+keybind = ^=text:\x1f
+keybind = shift+^=text:\x18\x1f
+keybind = °=text:\x18\x1f
+
+keybind = grave_accent=text:\x1f
