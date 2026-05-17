@@ -21,12 +21,16 @@ keybind = alt+l=esc:f
 keybind = alt+i=esc:i
 keybind = alt+k=esc:k
 keybind = alt+m=esc:m
+keybind = alt+u=esc:u
+keybind = alt+o=esc:o
 keybind = ctrl+eight=esc:x
 
 # Ctrl+Option+I / Ctrl+Option+K → emacs C-M-i / C-M-k (paredit list navigation)
 # Modifier bitmask: ctrl(4) + alt(2) = 6, +1 = 7.
 keybind = performable:ctrl+alt+i=text:\x1b[105;7u
 keybind = performable:ctrl+alt+k=text:\x1b[107;7u
+keybind = performable:ctrl+alt+u=text:\x1b[117;7u
+keybind = performable:ctrl+alt+o=text:\x1b[111;7u
 
 # Cmd+Option+I / Cmd+Option+K → emacs s-M-i / s-M-k (scroll keeping cursor row).
 # Modifier bitmask: super(8) + alt(2) = 10, +1 = 11.
@@ -54,6 +58,10 @@ keybind = performable:super+alt+ö=text:\x1b[246;11u
 # Modifier bitmask: ctrl(4) + super(8) = 12, +1 = 13.
 keybind = performable:ctrl+super+j=text:\x1b[106;13u
 keybind = performable:ctrl+super+l=text:\x1b[108;13u
+keybind = performable:ctrl+super+i=text:\x1b[105;13u
+keybind = performable:ctrl+super+k=text:\x1b[107;13u
+keybind = performable:ctrl+alt+super+i=text:\x1b[105;15u
+keybind = performable:ctrl+alt+super+k=text:\x1b[107;15u
 
 # Form-wise deletion in lisp (paredit). Wire forms:
 #   Option+Delete  → ESC DEL  (emacs M-DEL)  → backward-kill-sexp

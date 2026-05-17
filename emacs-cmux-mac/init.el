@@ -42,7 +42,11 @@
               ("C-M-i" . paredit-backward-up)
               ("C-M-k" . paredit-backward-down)
               ("M-DEL" . backward-kill-sexp)
-              ("M-=" . kill-sexp)))
+              ("M-=" . kill-sexp)
+              ("M-o" . paredit-forward-slurp-sexp)
+              ("M-u" . paredit-forward-barf-sexp)
+              ("C-M-u" . paredit-backward-slurp-sexp)
+              ("C-M-o" . paredit-backward-barf-sexp)))
 
 ;; kkp: Kitty Keyboard Protocol support for terminal Emacs.
 ;; cmux is built on Ghostty which speaks the kitty protocol — kkp tells
@@ -204,6 +208,111 @@
 
 (bind-key* "C-s-j" 'kw/move-sexp-left)
 (bind-key* "C-s-l" 'kw/move-sexp-right)
+
+(defun kw/drag-sexp--bounds ()
+  "Bounds of the sexp at point. Uses scan-sexps to avoid clojure-mode quirks."
+  (save-excursion
+    (let ((pt (point)) start end)
+      (condition-case nil
+          (progn
+            (forward-sexp)
+            (setq end (point))
+            (backward-sexp)
+            (setq start (point)))
+        (error (user-error "no sexp at point")))
+      (unless (and (<= start pt) (<= pt end))
+        (user-error "no sexp at point"))
+      (cons start end))))
+
+(defun kw/drag-sexp--collapse-spaces ()
+  "Replace any whitespace around point with a single space (or none at edges)."
+  (let ((before-ws (save-excursion (skip-chars-backward " \t") (point)))
+        (after-ws  (save-excursion (skip-chars-forward  " \t") (point))))
+    (delete-region before-ws after-ws))
+  (cond
+    ((or (bobp) (eobp)) nil)
+    ((or (looking-back "[([{]" 1) (looking-at "[])}]")) nil)
+    (t (insert " ") (backward-char))))
+
+(defun kw/drag-sexp-forward-down ()
+  "Move sexp at point into the start of the next sibling list."
+  (interactive)
+  (let* ((b (kw/drag-sexp--bounds))
+         (start (car b)) (end (cdr b))
+         (text (buffer-substring start end)))
+    (save-excursion
+      (goto-char end)
+      (skip-chars-forward " \t\n")
+      (unless (looking-at "[([{]")
+        (user-error "no next sibling list")))
+    (delete-region start end)
+    (kw/drag-sexp--collapse-spaces)
+    (skip-chars-forward " \t\n")
+    (forward-char)
+    (let ((p (point)))
+      (insert text)
+      (unless (looking-at "[])}]") (insert " "))
+      (goto-char p))))
+
+(defun kw/drag-sexp-forward-up ()
+  "Move sexp at point out of enclosing list, place it after."
+  (interactive)
+  (let* ((b (kw/drag-sexp--bounds))
+         (start (car b)) (end (cdr b))
+         (text (buffer-substring start end)))
+    (save-excursion
+      (goto-char end)
+      (condition-case nil (paredit-forward-up)
+        (error (user-error "not inside a list")))
+      (unless (> (point) end) (user-error "not inside a list")))
+    (delete-region start end)
+    (kw/drag-sexp--collapse-spaces)
+    (paredit-forward-up)
+    (insert " " text)
+    (backward-char (length text))))
+
+(defun kw/drag-sexp-backward-down ()
+  "Move sexp at point into the end of the previous sibling list."
+  (interactive)
+  (let* ((b (kw/drag-sexp--bounds))
+         (start (car b)) (end (cdr b))
+         (text (buffer-substring start end)))
+    (save-excursion
+      (goto-char start)
+      (skip-chars-backward " \t\n")
+      (unless (looking-back "[])}]" 1)
+        (user-error "no previous sibling list")))
+    (delete-region start end)
+    (kw/drag-sexp--collapse-spaces)
+    (skip-chars-backward " \t\n")
+    (backward-char)
+    (let ((p (point)))
+      (unless (looking-back "[([{]" 1) (insert " ") (setq p (point)))
+      (insert text)
+      (goto-char (+ p (if (= p (point)) 0 0))))))
+
+(defun kw/drag-sexp-backward-up ()
+  "Move sexp at point out of enclosing list, place it before."
+  (interactive)
+  (let* ((b (kw/drag-sexp--bounds))
+         (start (car b)) (end (cdr b))
+         (text (buffer-substring start end)))
+    (save-excursion
+      (goto-char start)
+      (condition-case nil (paredit-backward-up)
+        (error (user-error "not inside a list")))
+      (unless (< (point) start) (user-error "not inside a list")))
+    (delete-region start end)
+    (kw/drag-sexp--collapse-spaces)
+    (paredit-backward-up)
+    (let ((p (point)))
+      (insert text " ")
+      (goto-char p))))
+
+(bind-key* "C-s-k" 'kw/drag-sexp-forward-down)
+(bind-key* "C-s-i" 'kw/drag-sexp-forward-up)
+(bind-key* "C-M-s-k" 'kw/drag-sexp-backward-down)
+(bind-key* "C-M-s-i" 'kw/drag-sexp-backward-up)
 
 (global-display-line-numbers-mode 1)
 
