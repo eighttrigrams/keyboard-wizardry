@@ -35,6 +35,7 @@ keybind = performable:super+alt+k=text:\x1b[107;11u
 keybind = performable:super+alt+u=text:\x1b[117;11u
 keybind = performable:super+alt+o=text:\x1b[111;11u
 keybind = performable:super+alt+eight=text:\x1b[56;11u
+keybind = performable:super+ß=text:\x1b[223;9u
 
 # Cmd+Ö → emacs s-ö (move cursor to middle of window).
 # Codepoint 246 = 'ö', super-only modifier = 9.

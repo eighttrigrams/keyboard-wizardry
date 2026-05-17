@@ -161,6 +161,12 @@
 
 (bind-key* "s-M-8" 'dired)
 
+(defun kw/revert-buffer-no-confirm ()
+  (interactive)
+  (revert-buffer t t))
+
+(bind-key* "s-ß s-ß" 'kw/revert-buffer-no-confirm)
+
 (defun kw/recenter-keep-column ()
   (interactive)
   (let ((col (current-column)))
