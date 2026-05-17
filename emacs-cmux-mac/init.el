@@ -11,8 +11,11 @@
 (require 'use-package)
 (setq use-package-always-ensure t)
 
-(unless package-archive-contents
-  (package-refresh-contents))
+(defvar kw/required-packages '(clojure-mode cider paredit kkp))
+(unless (cl-every #'package-installed-p kw/required-packages)
+  (package-refresh-contents)
+  (dolist (pkg kw/required-packages)
+    (unless (package-installed-p pkg) (package-install pkg))))
 
 ;; clojure-mode: syntax + indentation for .clj/.cljs/.cljc/.edn
 (use-package clojure-mode)
@@ -143,8 +146,18 @@
 (bind-key* "s-M-i" 'kw/scroll-down-keep-row)
 (bind-key* "s-M-k" 'kw/scroll-up-keep-row)
 
-(bind-key* "s-M-u" 'windmove-left)
-(bind-key* "s-M-o" 'windmove-right)
+(defun kw/windmove-prev ()
+  (interactive)
+  (condition-case nil (windmove-left)
+    (error (condition-case nil (windmove-up) (error nil)))))
+
+(defun kw/windmove-next ()
+  (interactive)
+  (condition-case nil (windmove-right)
+    (error (condition-case nil (windmove-down) (error nil)))))
+
+(bind-key* "s-M-u" 'kw/windmove-prev)
+(bind-key* "s-M-o" 'kw/windmove-next)
 
 (defun kw/recenter-keep-column ()
   (interactive)

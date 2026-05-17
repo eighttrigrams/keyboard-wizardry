@@ -22,7 +22,7 @@ link "$repo/init.el"          "$HOME/.emacs.d/init.el"
 link "$repo/config.ghostty"   "$HOME/Library/Application Support/com.mitchellh.ghostty/config.ghostty"
 link "$repo/cmux-settings.json" "$HOME/.config/cmux/settings.json"
 
-python3 "$repo/patch-cmux-plist.py"
+/usr/bin/python3 "$repo/patch-cmux-plist.py"
 
 echo
 echo "Symlinks installed. Now restart cmux to apply NSMenu changes:"
