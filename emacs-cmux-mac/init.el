@@ -11,6 +11,9 @@
 (require 'use-package)
 (setq use-package-always-ensure t)
 
+(unless package-archive-contents
+  (package-refresh-contents))
+
 ;; clojure-mode: syntax + indentation for .clj/.cljs/.cljc/.edn
 (use-package clojure-mode)
 
