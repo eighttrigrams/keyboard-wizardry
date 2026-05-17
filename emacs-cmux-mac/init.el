@@ -159,6 +159,8 @@
 (bind-key* "s-M-u" 'kw/windmove-prev)
 (bind-key* "s-M-o" 'kw/windmove-next)
 
+(bind-key* "s-M-8" 'dired)
+
 (defun kw/recenter-keep-column ()
   (interactive)
   (let ((col (current-column)))
