@@ -1,0 +1,2 @@
+keybind = performable:super+i=text:\x1b[105;9u
+keybind = performable:super+l=text:\x1b[108;9u
