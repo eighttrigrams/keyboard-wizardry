@@ -20,6 +20,8 @@ keybind = alt+j=esc:b
 keybind = alt+l=esc:f
 keybind = alt+i=esc:i
 keybind = alt+k=esc:k
+keybind = alt+m=esc:m
+keybind = ctrl+eight=esc:x
 
 # Ctrl+Option+I / Ctrl+Option+K → emacs C-M-i / C-M-k (paredit list navigation)
 # Modifier bitmask: ctrl(4) + alt(2) = 6, +1 = 7.
@@ -30,6 +32,8 @@ keybind = performable:ctrl+alt+k=text:\x1b[107;7u
 # Modifier bitmask: super(8) + alt(2) = 10, +1 = 11.
 keybind = performable:super+alt+i=text:\x1b[105;11u
 keybind = performable:super+alt+k=text:\x1b[107;11u
+keybind = performable:super+alt+u=text:\x1b[117;11u
+keybind = performable:super+alt+o=text:\x1b[111;11u
 
 # Cmd+Ö → emacs s-ö (move cursor to middle of window).
 # Codepoint 246 = 'ö', super-only modifier = 9.
@@ -56,6 +60,8 @@ keybind = performable:ctrl+super+l=text:\x1b[108;13u
 # layout (on a German Mac that key produces '´').
 keybind = alt+backspace=text:\x1b\x7f
 keybind = alt+equal=text:\x1b\x3d
+keybind = alt+enter=text:\x1b\x0d
+keybind = performable:ctrl+alt+super+enter=text:\x1b[13;15u
 
 # Undo / redo on the IntlBackslash physical key (the '^' / '<>' key on
 # German layouts). Wire forms:

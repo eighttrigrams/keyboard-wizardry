@@ -14,6 +14,13 @@
 ;; clojure-mode: syntax + indentation for .clj/.cljs/.cljc/.edn
 (use-package clojure-mode)
 
+(use-package cider
+  :hook (clojure-mode . cider-mode)
+  :config (setq cider-preferred-build-tool "clojure-cli")
+  :bind (:map cider-mode-map
+              ("M-RET" . cider-eval-defun-at-point)
+              ("C-M-s-<return>" . cider-load-buffer)))
+
 ;; paredit: structural editing for s-expressions
 ;; Enabled in all common Lisp modes so parens/brackets/braces stay balanced
 (use-package paredit
@@ -51,6 +58,13 @@
 
 (global-set-key (kbd "C-x C-/") 'undo-redo)
 (global-set-key (kbd "C-x C-_") 'undo-redo)
+
+(global-set-key (kbd "M-m") 'xref-find-definitions)
+
+(define-key minibuffer-local-map (kbd "<escape>") 'abort-recursive-edit)
+(define-key minibuffer-local-completion-map (kbd "<escape>") 'abort-recursive-edit)
+(define-key minibuffer-local-must-match-map (kbd "<escape>") 'abort-recursive-edit)
+(define-key minibuffer-local-ns-map (kbd "<escape>") 'abort-recursive-edit)
 
 (global-set-key (kbd "s-9") 'save-buffer)
 (global-set-key (kbd "s-0 s-0") 'save-buffers-kill-terminal)
@@ -125,6 +139,9 @@
 
 (bind-key* "s-M-i" 'kw/scroll-down-keep-row)
 (bind-key* "s-M-k" 'kw/scroll-up-keep-row)
+
+(bind-key* "s-M-u" 'windmove-left)
+(bind-key* "s-M-o" 'windmove-right)
 
 (defun kw/recenter-keep-column ()
   (interactive)
