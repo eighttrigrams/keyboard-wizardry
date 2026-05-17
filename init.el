@@ -158,6 +158,12 @@
 (bind-key* "s-M-p" 'kw/page-up-middle)
 (bind-key* "s-M-ö" 'kw/page-down-middle)
 
+(defun kw/move-sexp-left () (interactive) (transpose-sexps -1))
+(defun kw/move-sexp-right () (interactive) (transpose-sexps 1))
+
+(bind-key* "C-s-j" 'kw/move-sexp-left)
+(bind-key* "C-s-l" 'kw/move-sexp-right)
+
 (global-display-line-numbers-mode 1)
 
 (defvar kw/layout-bookmarks nil

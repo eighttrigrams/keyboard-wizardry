@@ -21,6 +21,8 @@
 - cmd+p jump to line
 - option+cmd+i page up, w/ cursor centered vertically
 - option+cmd+k page down, w/ cursor centered vertically
+- ctrl+cmd+j move sexp leftwards
+- ctrl+cmd+l move sexp rightwards
 
 # Structured LISP editing:
 
