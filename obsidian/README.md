@@ -6,3 +6,8 @@ Set up Obsidian keybindings.
 $ ln -s /Users/daniel/Workspace/eighttrigrams/keyboard-wizardry/obsidian/editor-commands-remap /Users/daniel/Documents/Obsidian\ Vaults/Default\ Vault/.obsidian/plugins/editor-commands-remap
 $ ln -s /Users/daniel/Workspace/eighttrigrams/keyboard-wizardry/obsidian/hotkeys.json /Users/daniel/Documents/Obsidian\ Vaults/Default\ Vault/.obsidian/hotkeys.json
 ```
+
+cd editor-commands-remap
+npm i
+npm run dev
+ctrl+c
