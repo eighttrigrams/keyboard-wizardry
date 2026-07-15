@@ -77,8 +77,11 @@ keybind = performable:ctrl+alt+super+enter=text:\x1b[13;15u
 # German layouts). Wire forms:
 #   intl_backslash        → C-/ (\x1f)        → emacs `undo`
 #   shift+intl_backslash  → C-x C-/ (\x18\x1f) → emacs `undo-redo` (bound in init.el)
-keybind = ^=text:\x1f
-keybind = shift+^=text:\x18\x1f
-keybind = °=text:\x18\x1f
-
-keybind = grave_accent=text:\x1f
+# Disabled on US layout: these character-literal triggers were authored for a
+# German keyboard's IntlBackslash key and collide with other keys here (e.g. the
+# shifted form swallowed '<'). Re-enable by physical key name if needed.
+# keybind = ^=text:\x1f
+# keybind = shift+^=text:\x18\x1f
+# keybind = °=text:\x18\x1f
+#
+# keybind = grave_accent=text:\x1f
