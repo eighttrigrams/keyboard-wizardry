@@ -21,11 +21,22 @@
 - cmd+p jump to line
 - option+cmd+i page up, w/ cursor centered vertically
 - option+cmd+k page down, w/ cursor centered vertically
-- ctrl+cmd+j move sexp leftwards
-- ctrl+cmd+l move sexp rightwards
+
+# Markdown editing
+
+- cmd+i cursor up
+- cmd+k cursor down
+- cmd+j cursor left
+- cmd+l cursor right
+- option+j wordwise backward
+- option+l wordwise forward
+- ctrl+j move to beginning of markdown "sentence" (beginning of the line if last one ended with two spaces, otherwise move further to the beginning of the text block
+- ctrl+l move to the next markdown sentence. so if a block ends with two spaces, move cursor to the next line, otherwise to the beginning of the next block
 
 # Structured LISP editing:
 
+- ctrl+cmd+j move sexp leftwards
+- ctrl+cmd+l move sexp rightwards
 - option+k - into next SEXP (down list)
 - option+i - out of SEXP, forward (forward up list)
 - option+j - paredit backward
