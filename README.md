@@ -74,3 +74,8 @@ Reload with `Esc` then `x` (becomes `M-x` somehow) the `load-file`, Enter then `
 - cmd+option+m,cmd+option+m - create/name/remove bookmark
 
 call `emacs-el layout-name` in a directory which has `.editor-layouts` and a layout of that name defined.
+
+# CodeMirror
+
+The web apps get the scheme from `codemirror/` — a small library they depend on
+instead of each keeping a copy of the bindings. See `codemirror/README.md`.

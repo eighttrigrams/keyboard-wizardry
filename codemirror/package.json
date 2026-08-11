@@ -1,0 +1,26 @@
+{
+  "name": "@eighttrigrams/kw-codemirror",
+  "version": "0.0.1",
+  "description": "The IJKL scheme as CodeMirror 6 bindings. One implementation, for every project that mounts a CodeMirror.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test \"test/*_test.js\"",
+    "dev": "esbuild demo/index.js demo/textareas.js --bundle --format=iife --outdir=demo/build --servedir=demo --serve=127.0.0.1:8027",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@codemirror/commands": "6.10.3",
+    "@codemirror/state": "6.6.0",
+    "@codemirror/view": "6.43.1",
+    "@playwright/test": "1.61.1",
+    "esbuild": "0.28.2"
+  }
+}

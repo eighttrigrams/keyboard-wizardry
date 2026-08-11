@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IJKL — on form textareas</title>
+<style>
+  :root {
+    --ink: #2b2b2b;
+    --dim: #8a8578;
+    --paper: #faf7f0;
+    --rule: rgba(0,0,0,0.15);
+    --live: #b8860b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto; max-width: 46rem; padding: 2rem;
+    background: var(--paper); color: var(--ink);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  h1 { font-size: 1rem; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); margin: 0 0 .5rem; }
+  p.note { color: var(--dim); font-size: .85rem; }
+  .form-group { margin-bottom: 1.25rem; }
+  label { display: block; font-weight: 600; margin-bottom: .3rem; font-size: .9rem; }
+
+  /* Deliberately the same shape of rule blog states in views.clj, so the editor
+     is inheriting a real page's idea of a textarea rather than a tailored one. */
+  input[type=text], textarea {
+    width: 100%; padding: 0.6rem; font-size: 1.125rem; font-family: inherit;
+    border: 1px solid var(--rule); border-radius: 3px; background: #fff;
+  }
+  input[type=text]:focus, textarea:focus { outline: none; border-color: #FD5353; }
+  textarea { min-height: 220px; resize: vertical; line-height: 1.8; }
+  textarea#abstract { min-height: 80px; }
+
+  button {
+    font: inherit; padding: .45rem 1.1rem; border: 1px solid var(--rule);
+    border-radius: 3px; background: #fff; cursor: pointer;
+  }
+  #serialized {
+    margin-top: 1.5rem; padding: .8rem 1rem; border: 1px solid var(--rule);
+    border-radius: 3px; background: #fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8rem;
+    white-space: pre-wrap;
+  }
+  #serialized:empty::before { content: "nothing submitted yet"; color: var(--dim); }
+  #serialized b { color: var(--live); }
+</style>
+</head>
+<body>
+  <h1>The editor on a form's textareas</h1>
+  <p class="note">
+    <a href="index.html">← back to the bindings</a> · The two marked fields below are
+    CodeMirror with the IJKL bindings; “Private notes” is left a plain textarea, to
+    show the marker is what decides. Submitting does not leave the page — it prints
+    what the form would have sent, which is the whole question when the thing you
+    type into is a contenteditable div and not a field.
+  </p>
+
+  <form id="article">
+    <div class="form-group">
+      <label for="title">Title</label>
+      <input type="text" name="title" id="title" value="The rule, in one page">
+    </div>
+    <div class="form-group">
+      <label for="abstract">Abstract</label>
+      <textarea name="abstract" id="abstract" data-editor>Short, and still a form field.</textarea>
+    </div>
+    <div class="form-group">
+      <label for="content">Content <span class="note">(required — try submitting it empty)</span></label>
+      <textarea name="content" id="content" data-editor required>A block is a run of lines.
+
+Type here, then submit: what comes out is the textarea's value, mirrored from
+the editor's document on every change.</textarea>
+    </div>
+    <div class="form-group">
+      <label for="private">Private notes <span class="note">(not marked, stays a plain textarea)</span></label>
+      <textarea name="private" id="private" style="min-height: 80px;">Plain. cmd+l does nothing here.</textarea>
+    </div>
+    <button type="submit">Submit</button>
+  </form>
+
+  <div id="serialized"></div>
+  <script src="build/textareas.js"></script>
+</body>
+</html>

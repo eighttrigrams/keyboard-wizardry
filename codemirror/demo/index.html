@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IJKL — CodeMirror bindings</title>
+<style>
+  :root {
+    --ink: #2b2b2b;
+    --dim: #8a8578;
+    --paper: #faf7f0;
+    --rule: #e3ddd0;
+    --live: #b8860b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: grid;
+    grid-template-columns: 1fr 20rem;
+    gap: 2rem;
+    align-items: start;
+    padding: 2rem;
+    min-height: 100vh;
+  }
+  h1 { font-size: 1rem; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); margin: 0 0 1rem; }
+  #editor { border: 1px solid var(--rule); border-radius: 4px; background: #fff; height: 60vh; }
+  .cm-hardbreak { color: var(--rule); }
+  aside { font-size: .875rem; }
+  table { border-collapse: collapse; width: 100%; }
+  td { padding: .2rem .4rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  td.chord { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; color: var(--dim); }
+  tr.fired td { color: var(--live); font-weight: 600; }
+  tr.fired td.chord { color: var(--live); }
+  #readout {
+    margin-top: 1rem; padding: .6rem .8rem; border: 1px solid var(--rule); border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8rem; background: #fff;
+  }
+  #readout b { font-weight: 600; color: var(--live); }
+  p.note { color: var(--dim); font-size: .8rem; }
+</style>
+</head>
+<body>
+  <main>
+    <h1>Zen editor — the bindings, on their own</h1>
+    <div id="editor"></div>
+    <p class="note">
+      Grey <span class="cm-hardbreak">⏎</span> marks a hard break: a line ending in two
+      or more spaces. ctrl+l steps onto the next line there, and to the next block
+      everywhere else.
+    </p>
+  </main>
+  <aside>
+    <p class="note" style="margin-top:0"><a href="textareas.html">On form textareas →</a></p>
+    <h1>Markdown editing</h1>
+    <table id="cheatsheet">
+      <tr data-chord="KeyI meta"><td class="chord">cmd+i</td><td>cursor up</td></tr>
+      <tr data-chord="KeyK meta"><td class="chord">cmd+k</td><td>cursor down</td></tr>
+      <tr data-chord="KeyJ meta"><td class="chord">cmd+j</td><td>cursor left</td></tr>
+      <tr data-chord="KeyL meta"><td class="chord">cmd+l</td><td>cursor right</td></tr>
+      <tr data-chord="KeyJ alt"><td class="chord">option+j</td><td>wordwise backward</td></tr>
+      <tr data-chord="KeyL alt"><td class="chord">option+l</td><td>wordwise forward</td></tr>
+      <tr data-chord="KeyJ ctrl"><td class="chord">ctrl+j</td><td>sentence start</td></tr>
+      <tr data-chord="KeyL ctrl"><td class="chord">ctrl+l</td><td>sentence end</td></tr>
+    </table>
+    <div id="readout">
+      chord <b id="last-chord">—</b><br>
+      caret <b id="caret">0</b> · line <b id="line">1</b>:<b id="col">1</b>
+    </div>
+  </aside>
+  <script src="build/index.js"></script>
+</body>
+</html>
