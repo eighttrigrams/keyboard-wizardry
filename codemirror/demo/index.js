@@ -15,7 +15,7 @@ import {EditorState, RangeSetBuilder} from '@codemirror/state';
 import {EditorView, Decoration, WidgetType, ViewPlugin} from '@codemirror/view';
 import {keymap} from '@codemirror/view';
 import * as commands from '@codemirror/commands';
-import {install, bindings} from '../src/index.js';
+import {install, markdownBindings} from '../src/index.js';
 
 const B = '  '; // the two spaces that make a hard break, spelled out so an
                 // editor stripping trailing whitespace cannot quietly break it
@@ -124,7 +124,7 @@ install(view, commands);
 
 // Capture on document, which in the capture phase runs before the editor's own
 // listener — so this still sees the chords the library stops from propagating.
-const known = bindings(commands);
+const known = markdownBindings(commands);
 document.addEventListener('keydown', event => {
   const mods = [];
   if (event.altKey) mods.push('alt');

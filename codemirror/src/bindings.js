@@ -34,8 +34,11 @@ export function motion(fn) {
 }
 
 // The table, as chord string -> CodeMirror command. Eight bindings, the
-// "Markdown editing" section of the README and nothing else.
-export function bindings(commands) {
+// "Markdown editing" section of the README and nothing else. For the whole of
+// "Normal editing" — 47 chords, what tracker uses — see editingBindings in
+// editing.js. The two differ on ctrl+j / ctrl+l: sentence motions here, line
+// start and end there.
+export function markdownBindings(commands) {
   return {
     'KeyI meta': commands.cursorLineUp,
     'KeyK meta': commands.cursorLineDown,
@@ -52,9 +55,12 @@ export function bindings(commands) {
 // extension, so these win before CodeMirror's own keymaps see the event —
 // which is also how tracker's codemirror.cljs has always done it.
 //
+// `table` chooses the set: markdownBindings by default, editingBindings for the
+// full scheme, or any chord -> command map of your own.
+//
 // Returns a function that takes the bindings back off again.
-export function install(view, commands) {
-  const table = bindings(commands);
+export function install(view, commands, table) {
+  table = table || markdownBindings(commands);
   const onKeydown = function (e) {
     const command = table[chord(e)];
     if (!command) return;
