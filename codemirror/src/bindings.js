@@ -10,6 +10,8 @@
 // So this package has no dependencies. That is deliberate.
 
 import {sentenceStart, sentenceEnd} from './motions.js';
+import {clojureFenceAt} from './fences.js';
+import {forwardSexp, backwardSexp, forwardDownSexp, forwardUpSexp} from './sexp.js';
 
 // Keyed on e.code, never e.key: on macOS Option is a compose modifier, so
 // option+j arrives as e.key "∆". An e.key map would fail silently for
@@ -33,6 +35,26 @@ export function motion(fn) {
   };
 }
 
+// The same chord meaning one thing in prose and another inside a ```clojure
+// block — which is what makes structural editing bindable on keys that are
+// already spoken for. Outside such a block the fallback runs and nothing has
+// changed; inside one, movement is by form and cannot leave the block.
+//
+// The senses are Calva's, since that is what the VSCode keymap binds and it is
+// the same hands here: option+l over the next form, option+j over the previous,
+// option+k into the next list, option+i out of this one to the right.
+export function sexpAware(motion, fallback) {
+  return function (view) {
+    const text = view.state.doc.toString();
+    const pos = view.state.selection.main.head;
+    const fence = clojureFenceAt(text, pos);
+    if (!fence) return fallback(view);
+    const target = motion(text, pos, fence.from, fence.to);
+    view.dispatch({selection: {anchor: target, head: target}, scrollIntoView: true});
+    return true;
+  };
+}
+
 // The table, as chord string -> CodeMirror command. Eight bindings, the
 // "Markdown editing" section of the README and nothing else. For the whole of
 // "Normal editing" — 47 chords, what tracker uses — see editingBindings in
@@ -44,10 +66,18 @@ export function markdownBindings(commands) {
     'KeyK meta': commands.cursorLineDown,
     'KeyJ meta': commands.cursorCharLeft,
     'KeyL meta': commands.cursorCharRight,
-    'KeyJ alt': commands.cursorGroupLeft,
-    'KeyL alt': commands.cursorGroupRight,
+    'KeyJ alt': sexpAware(backwardSexp, commands.cursorGroupLeft),
+    'KeyL alt': sexpAware(forwardSexp, commands.cursorGroupRight),
     'KeyJ ctrl': motion(sentenceStart),
-    'KeyL ctrl': motion(sentenceEnd)
+    'KeyL ctrl': motion(sentenceEnd),
+
+    // Nine and ten, where there were eight. option+i and option+k were not in
+    // this set at all, and inside a ```clojure block they are the two motions
+    // that have no wordwise equivalent to borrow — into a form, and out of it.
+    // Outside a block they do what they do in the editing set, line up and down,
+    // so they are not chords that swallow a key and do nothing.
+    'KeyI alt': sexpAware(forwardUpSexp, commands.cursorLineUp),
+    'KeyK alt': sexpAware(forwardDownSexp, commands.cursorLineDown)
   };
 }
 

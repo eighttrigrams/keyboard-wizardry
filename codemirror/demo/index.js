@@ -37,7 +37,18 @@ const SAMPLE = [
   '',
   'Word motion is option+j and option+l. Those are the two that would break if',
   'the bindings were keyed on e.key rather than e.code, because on macOS option',
-  'is a compose modifier and option+j arrives as "∆".'
+  'is a compose modifier and option+j arrives as "∆".',
+  '',
+  'Inside the block below the same option keys move by *form* instead, and cannot',
+  'leave the block. Put the caret in it and try them.',
+  '',
+  '```clojure',
+  '(defn greet [name]',
+  '  (let [greeting (str "hello, " name)]   ; a string, and a comment',
+  '    (println greeting)))',
+  '```',
+  '',
+  'Out here again, option+l is a word motion as before.'
 ].join('\n');
 
 /* ---- the editor, themed like blog's prose ------------------------------ */

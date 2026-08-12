@@ -18,8 +18,35 @@ second. That is what the two apps already did, and a binding is somebody's muscl
 memory, so it is not a thing to unify while tidying code. A test asserts the
 disagreement so it cannot be closed by accident.
 
-Structured LISP editing is not implemented yet; when it is, it belongs beside
-`src/motions.js` as its own module of pure functions.
+## Structural editing, inside a fenced block
+
+Of *Structured LISP editing*, the four motions — and only inside a fenced
+`clojure`, `clj`, `cljs`, `cljc` or `edn` block in the document. There the four
+option keys move by form; anywhere else in the prose they are the word and line
+motions they always were, and there is nothing to turn on:
+
+| key | inside a Clojure fence | everywhere else |
+|---|---|---|
+| `option+l` | over the next form | word forward |
+| `option+j` | back over a form | word backward |
+| `option+k` | into the next list | line down |
+| `option+i` | out of this list, rightwards | line up |
+
+The senses and names are Calva's — `forwardSexp`, `backwardSexp`,
+`forwardDownSexp`, `forwardUpSexp` — because that is what the VSCode keymap in
+this repo binds, and it is the same hands. Calva's *code* is not here: its paredit
+runs on an `EditableDocument` through a `LispTokenCursor` and a lexer, which is a
+lot of machinery to transplant for four motions, and it knows nothing about being
+confined to part of a markdown document.
+
+What stands in for it, in `src/sexp.js`, is one pass that marks every character as
+code, string, comment or character literal; the motions then look only at code. So
+a `;` inside a string is not a comment, a paren inside a string is not a
+delimiter, and `\(` is neither. Movement never leaves the block.
+
+`backwardUpSexp` and `backwardDownSexp` are implemented and exported but not
+bound to anything — one line each in the tables when they are wanted. Nothing
+that *edits* structure (slurp, barf, drag, kill) is here yet.
 
 ## What it gives you
 

@@ -63,7 +63,21 @@
       <tr data-chord="KeyL alt"><td class="chord">option+l</td><td>wordwise forward</td></tr>
       <tr data-chord="KeyJ ctrl"><td class="chord">ctrl+j</td><td>sentence start</td></tr>
       <tr data-chord="KeyL ctrl"><td class="chord">ctrl+l</td><td>sentence end</td></tr>
+      <tr data-chord="KeyI alt"><td class="chord">option+i</td><td>cursor up</td></tr>
+      <tr data-chord="KeyK alt"><td class="chord">option+k</td><td>cursor down</td></tr>
     </table>
+    <h1 style="margin-top:1.5rem">Inside ```clojure</h1>
+    <table id="sexp-sheet">
+      <tr><td class="chord">option+j</td><td>back over a form</td></tr>
+      <tr><td class="chord">option+l</td><td>over the next form</td></tr>
+      <tr><td class="chord">option+k</td><td>into the next list</td></tr>
+      <tr><td class="chord">option+i</td><td>out of this list, rightwards</td></tr>
+    </table>
+    <p class="note">
+      The same four keys, in a fenced <code>clojure</code>, <code>clj</code>,
+      <code>cljs</code>, <code>cljc</code> or <code>edn</code> block. Movement stays
+      inside the block; a block of any other language is prose.
+    </p>
     <div id="readout">
       chord <b id="last-chord">—</b><br>
       caret <b id="caret">0</b> · line <b id="line">1</b>:<b id="col">1</b>

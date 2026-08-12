@@ -1,6 +1,6 @@
 {
   "name": "@eighttrigrams/kw-codemirror",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "The IJKL scheme as CodeMirror 6 bindings. One implementation, for every project that mounts a CodeMirror.",
   "license": "UNLICENSED",
   "type": "module",

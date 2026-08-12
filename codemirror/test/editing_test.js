@@ -13,12 +13,14 @@ import assert from 'node:assert';
 import {editingBindings} from '../src/editing.js';
 import {markdownBindings} from '../src/bindings.js';
 
+const called = [];
+
 function stubCommands() {
   const made = new Map();
   return new Proxy({}, {
     get(_, name) {
       if (!made.has(name)) {
-        const fn = () => {};
+        const fn = () => { called.push(String(name)); return true; };
         Object.defineProperty(fn, 'name', {value: String(name)});
         made.set(name, fn);
       }
@@ -29,6 +31,37 @@ function stubCommands() {
 
 const cmds = stubCommands();
 const table = editingBindings(cmds);
+
+// Enough of an EditorView for a command to run against: the four option motions
+// are fence-aware, so they read the document and either delegate or dispatch.
+function fakeView(text, pos) {
+  const dispatched = [];
+  return {
+    dispatched,
+    state: {
+      doc: {toString: () => text, length: text.length},
+      selection: {main: {head: pos, anchor: pos, from: pos, to: pos}}
+    },
+    dispatch: spec => dispatched.push(spec)
+  };
+}
+
+// What a chord did: the name of the command it delegated to, or the caret it
+// moved to. Exactly one of the two.
+function runChord(bindings, chord, text, pos) {
+  called.length = 0;
+  const view = fakeView(text, pos);
+  bindings[chord](view);
+  return {delegated: called[0], head: view.dispatched[0]?.selection?.head};
+}
+
+// The four that mean one thing in prose and another inside a ```clojure block.
+const FENCE_AWARE = {
+  'KeyJ alt': 'cursorGroupLeft',
+  'KeyL alt': 'cursorGroupRight',
+  'KeyI alt': 'cursorLineUp',
+  'KeyK alt': 'cursorLineDown'
+};
 
 test('every chord is bound to something callable', () => {
   for (const [chord, command] of Object.entries(table)) {
@@ -59,16 +92,44 @@ test('the motions are CodeMirror\'s, by identity', () => {
   assert.strictEqual(table['KeyL meta'], cmds.cursorCharRight);
   assert.strictEqual(table['KeyI meta'], cmds.cursorLineUp);
   assert.strictEqual(table['KeyK meta'], cmds.cursorLineDown);
-  assert.strictEqual(table['KeyJ alt'], cmds.cursorGroupLeft);
-  assert.strictEqual(table['KeyL alt'], cmds.cursorGroupRight);
+});
+
+test('in prose, the four option motions delegate to what they always were', () => {
+  // They are wrappers now, not the commands themselves, so identity cannot say
+  // this — but which command they hand a prose document to can.
+  for (const [chord, fallback] of Object.entries(FENCE_AWARE)) {
+    const {delegated, head} = runChord(table, chord, 'just some prose here', 5);
+    assert.strictEqual(delegated, fallback, chord);
+    assert.strictEqual(head, undefined, chord + ' moved the caret itself');
+  }
+});
+
+test('inside a ```clojure block the same four move by form instead', () => {
+  const text = '```clojure\n(a b)\n```\n';
+  const pos = text.indexOf('a') + 1;          // (a| b)
+  const expected = {
+    'KeyL alt': text.indexOf('b') + 1,        // over the next form
+    'KeyJ alt': text.indexOf('a'),            // back over this one
+    'KeyI alt': text.indexOf(')') + 1,        // out of the list, rightwards
+    'KeyK alt': pos                           // no list within: stays
+  };
+  for (const chord of Object.keys(FENCE_AWARE)) {
+    const {delegated, head} = runChord(table, chord, text, pos);
+    assert.strictEqual(delegated, undefined, chord + ' fell back inside a fence');
+    assert.strictEqual(head, expected[chord], chord);
+  }
+});
+
+test('a fence of another language is prose as far as these keys go', () => {
+  const text = '```js\nconst a = 1\n```\n';
+  const {delegated} = runChord(table, 'KeyL alt', text, text.indexOf('a'));
+  assert.strictEqual(delegated, 'cursorGroupRight');
 });
 
 test('shift selects wherever the unshifted chord moves', () => {
   const pairs = [
     ['KeyJ meta', 'KeyJ meta+shift', 'cursorCharLeft', 'selectCharLeft'],
     ['KeyL meta', 'KeyL meta+shift', 'cursorCharRight', 'selectCharRight'],
-    ['KeyJ alt', 'KeyJ alt+shift', 'cursorGroupLeft', 'selectGroupLeft'],
-    ['KeyL alt', 'KeyL alt+shift', 'cursorGroupRight', 'selectGroupRight'],
     ['KeyJ ctrl', 'KeyJ ctrl+shift', 'cursorLineStart', 'selectLineStart'],
     ['KeyL ctrl', 'KeyL ctrl+shift', 'cursorLineEnd', 'selectLineEnd']
   ];
@@ -76,6 +137,11 @@ test('shift selects wherever the unshifted chord moves', () => {
     assert.strictEqual(table[move], cmds[moveName], move);
     assert.strictEqual(table[select], cmds[selectName], select);
   }
+  // The option pair is wrapped, so only its selecting half is plain — and the
+  // selecting half is deliberately *not* fence-aware: selecting a form is a
+  // command of its own that this does not implement yet.
+  assert.strictEqual(table['KeyJ alt+shift'], cmds.selectGroupLeft);
+  assert.strictEqual(table['KeyL alt+shift'], cmds.selectGroupRight);
 });
 
 test('ctrl+j and ctrl+l are line start and end here, not the sentence motions', () => {
@@ -96,6 +162,14 @@ test('where the two sets overlap they agree, ctrl+j and ctrl+l aside', () => {
   const markdown = markdownBindings(cmds);
   for (const [chord, command] of Object.entries(markdown)) {
     if (chord === 'KeyJ ctrl' || chord === 'KeyL ctrl') continue;
+    if (chord in FENCE_AWARE) {
+      // Separate wrappers, so identity says nothing. What must agree is where
+      // each one sends a prose document.
+      assert.strictEqual(runChord(markdown, chord, 'plain prose here', 4).delegated,
+                         runChord(table, chord, 'plain prose here', 4).delegated,
+                         `${chord} falls back differently in the two sets`);
+      continue;
+    }
     assert.strictEqual(table[chord], command,
       `${chord} means different things in the two sets`);
   }

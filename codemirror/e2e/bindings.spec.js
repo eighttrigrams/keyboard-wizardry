@@ -125,3 +125,73 @@ test('the hard breaks are drawn', async ({page}) => {
   // Scoped to the editor: the legend under it uses the same class on purpose.
   await expect(page.locator('#editor .cm-hardbreak')).toHaveCount(2);
 });
+
+/* ---- inside a ```clojure block ----------------------------------------- */
+
+// The caret at a given occurrence of a string in the document, so these read as
+// positions in the code rather than as numbers.
+async function putCaretAt(page, needle, offset = 0) {
+  await page.evaluate(({needle, offset}) => {
+    const view = window.ijkl.view;
+    const at = view.state.doc.toString().indexOf(needle) + offset;
+    view.dispatch({selection: {anchor: at, head: at}});
+    view.focus();
+  }, {needle, offset});
+}
+
+async function charsAround(page) {
+  return await page.evaluate(() => {
+    const state = window.ijkl.view.state;
+    const head = state.selection.main.head;
+    const doc = state.doc.toString();
+    return {before: doc.slice(Math.max(0, head - 12), head), after: doc.slice(head, head + 12)};
+  });
+}
+
+test('option+l steps over a form, not a word', async ({page}) => {
+  // Before `greet` in `(defn greet [name]`: a word motion would stop after
+  // "greet", and a form motion lands in the same place — so use the vector,
+  // where the two differ: over `[name]` whole, brackets and all.
+  await putCaretAt(page, '[name]');
+  await page.keyboard.press('Alt+KeyL');
+  const {before, after} = await charsAround(page);
+  expect(before.endsWith('[name]')).toBe(true);
+  expect(after.startsWith('\n')).toBe(true);
+});
+
+test('option+k goes into the next list, option+i comes back out of it', async ({page}) => {
+  await putCaretAt(page, '(let');
+  await page.keyboard.press('Alt+KeyK');
+  expect((await charsAround(page)).after.startsWith('let')).toBe(true);
+
+  await page.keyboard.press('Alt+KeyI');
+  // Out of the (let …) and no further: of the three parens that close the block,
+  // two are now behind the caret — (println …)'s and (let …)'s — and the defn's
+  // is still ahead. Coming out one level at a time is the point of the key.
+  const {before, after} = await charsAround(page);
+  expect(before.endsWith('greeting))')).toBe(true);
+  expect(after.startsWith(')')).toBe(true);
+});
+
+test('option+j steps back over a whole form', async ({page}) => {
+  await putCaretAt(page, '[greeting', '[greeting'.length);
+  await page.keyboard.press('Alt+KeyJ');
+  expect((await charsAround(page)).after.startsWith('greeting')).toBe(true);
+});
+
+test('the motions do not leave the block', async ({page}) => {
+  // At the very end of the code, option+l has nowhere to go and must not walk
+  // out into the prose underneath.
+  await putCaretAt(page, '(println greeting)))', '(println greeting)))'.length);
+  const before = await page.evaluate(() => window.ijkl.head());
+  await page.keyboard.press('Alt+KeyL');
+  await page.keyboard.press('Alt+KeyI');
+  expect(await page.evaluate(() => window.ijkl.head())).toBe(before);
+});
+
+test('outside the block the same keys are word motions again', async ({page}) => {
+  await putCaretAt(page, 'Out here again');
+  await page.keyboard.press('Alt+KeyL');
+  const {before} = await charsAround(page);
+  expect(before.endsWith('Out')).toBe(true);
+});

@@ -16,6 +16,9 @@
 // bindings.js — what blog uses — they are the markdown "sentence" motions the
 // README describes. Two named sets rather than one, because both are in use.
 
+import {sexpAware} from './bindings.js';
+import {forwardSexp, backwardSexp, forwardDownSexp, forwardUpSexp} from './sexp.js';
+
 // ---- the commands CodeMirror does not come with -----------------------------
 
 // Clipboard by hand, through navigator.clipboard, because these chords are
@@ -138,10 +141,13 @@ export function editingBindings(commands) {
     'KeyL meta': commands.cursorCharRight,
     'KeyI meta': commands.cursorLineUp,
     'KeyK meta': commands.cursorLineDown,
-    'KeyJ alt': commands.cursorGroupLeft,
-    'KeyL alt': commands.cursorGroupRight,
-    'KeyI alt': commands.cursorLineUp,
-    'KeyK alt': commands.cursorLineDown,
+    // The four option motions do something else inside a ```clojure block: by
+    // form rather than by word or line, confined to the block. Everywhere else
+    // the fallback runs and these are the chords they always were.
+    'KeyJ alt': sexpAware(backwardSexp, commands.cursorGroupLeft),
+    'KeyL alt': sexpAware(forwardSexp, commands.cursorGroupRight),
+    'KeyI alt': sexpAware(forwardUpSexp, commands.cursorLineUp),
+    'KeyK alt': sexpAware(forwardDownSexp, commands.cursorLineDown),
     'KeyJ ctrl': commands.cursorLineStart,
     'KeyL ctrl': commands.cursorLineEnd,
 

@@ -17,7 +17,10 @@
 // the part worth testing, and the part a future scheme (structured LISP
 // editing) will grow beside, in its own module.
 
-export {install, markdownBindings, chord, motion} from './bindings.js';
+export {install, markdownBindings, chord, motion, sexpAware} from './bindings.js';
 export {editingBindings} from './editing.js';
+export {fenceAt, clojureFenceAt} from './fences.js';
+export {forwardSexp, backwardSexp, forwardDownSexp, forwardUpSexp,
+        backwardUpSexp, backwardDownSexp} from './sexp.js';
 export {sentenceStart, sentenceEnd} from './motions.js';
 export {fromTextarea, fromTextareas} from './textarea.js';
