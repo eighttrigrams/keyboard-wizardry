@@ -19,7 +19,9 @@ the two disagreed, the newer behaviour won.
 
 (tracker still shows a plain textarea to users who have not turned vim keys on.
 That path does not use this library at all, which is why it is not a second
-layout.)
+layout. rhizome and treina had tables of their own, word for word the same 47
+chords; they were deleted rather than merged, since there was nothing in them
+this does not do.)
 
 ## Structural editing, inside a fenced block
 
@@ -94,16 +96,27 @@ terminal to sit in.
 
 ## Who uses it
 
-Three apps in `~/Workspace/plurama.eighttrigrams`, in two different ways, because
-`plurama/Dockerfile` builds with that workspace as its context and **this library
-is outside it** — Docker cannot copy in what is not in the context.
+Six apps around `~/Workspace/plurama.eighttrigrams`, in two different ways,
+because `plurama/Dockerfile` builds with that workspace as its context and **this
+library is outside it** — Docker cannot copy in what is not in the context.
 
 - **blog** — a `file:` dependency of `blog/scripts/zen-editor`, which bundles it
   together with CodeMirror into the one vendored file blog commits. blog runs no
   npm in the image at all, so that file is what ships.
-- **personalist**, **tracker** — these *do* `npm install` inside the image, from
-  their lockfiles, so each carries the library **packed** (`npm pack`) in its own
-  `vendor/`, depended on as `file:vendor/...tgz`.
+- **personalist**, **tracker**, **treina**, **music**, **rhizome** — these *do*
+  `npm install` inside an image, from their lockfiles, so each carries the library
+  **packed** (`npm pack`) in its own `vendor/`, depended on as `file:vendor/...tgz`.
+
+Of those, tracker and rhizome show it only to users who asked for the keyboard
+scheme, in different ways: tracker keeps a plain textarea for everyone who has not
+turned vim keys on, and rhizome has no toggle at all — its editor *is* this one.
+music was a pair of plain textareas until it wasn't; treina, like rhizome, has no
+other mode.
+
+rhizome is a git repo of its own and ships an uberjar rather than an image, so
+`make deploy` in the workspace never touches it. It is vendored and checked with
+the others anyway, so the copies cannot drift apart, and its dev box carries the
+tarball through `rhizome/docker/.build-stage`.
 
 Do not maintain those copies by hand. From the workspace root:
 
