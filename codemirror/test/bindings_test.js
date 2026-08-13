@@ -1,17 +1,17 @@
-// The Normal editing table: 47 chords, and which command each one is.
+// The layout: 47 chords, and which command each one is.
 //
 //   npm test
 //
-// No browser and no CodeMirror. editingBindings only ever reads names off the
-// commands namespace it is handed, so the namespace here is a Proxy that answers
-// every name with the same function each time — which makes the assertions
-// identity checks rather than string comparisons, and means a chord pointing at
-// the wrong command cannot pass.
+// No browser and no CodeMirror. bindings() only ever reads names off the commands
+// namespace it is handed, so the namespace here is a Proxy that answers every
+// name with the same function each time — which makes the assertions identity
+// checks rather than string comparisons, and means a chord pointing at the wrong
+// command cannot pass.
 
 import {test} from 'node:test';
 import assert from 'node:assert';
-import {editingBindings} from '../src/editing.js';
-import {markdownBindings} from '../src/bindings.js';
+import {bindings} from '../src/bindings.js';
+import {sentenceStart, sentenceEnd} from '../src/motions.js';
 
 const called = [];
 
@@ -30,7 +30,7 @@ function stubCommands() {
 }
 
 const cmds = stubCommands();
-const table = editingBindings(cmds);
+const table = bindings(cmds);
 
 // Enough of an EditorView for a command to run against: the four option motions
 // are fence-aware, so they read the document and either delegate or dispatch.
@@ -69,7 +69,7 @@ test('every chord is bound to something callable', () => {
   }
 });
 
-test('the table is the 47 chords tracker had, and no more', () => {
+test('the table is 47 chords, and no more', () => {
   assert.strictEqual(Object.keys(table).length, 47);
 });
 
@@ -130,8 +130,6 @@ test('shift selects wherever the unshifted chord moves', () => {
   const pairs = [
     ['KeyJ meta', 'KeyJ meta+shift', 'cursorCharLeft', 'selectCharLeft'],
     ['KeyL meta', 'KeyL meta+shift', 'cursorCharRight', 'selectCharRight'],
-    ['KeyJ ctrl', 'KeyJ ctrl+shift', 'cursorLineStart', 'selectLineStart'],
-    ['KeyL ctrl', 'KeyL ctrl+shift', 'cursorLineEnd', 'selectLineEnd']
   ];
   for (const [move, select, moveName, selectName] of pairs) {
     assert.strictEqual(table[move], cmds[moveName], move);
@@ -144,34 +142,46 @@ test('shift selects wherever the unshifted chord moves', () => {
   assert.strictEqual(table['KeyL alt+shift'], cmds.selectGroupRight);
 });
 
-test('ctrl+j and ctrl+l are line start and end here, not the sentence motions', () => {
-  // The one binding the two sets disagree about. tracker has always had line
-  // start and end on these; blog has the markdown "sentence" motions. If this
-  // test ever fails, somebody has unified the two sets — which changes what
-  // Daniel's hands already know in one app or the other, and is not a thing to
-  // do by accident.
-  assert.strictEqual(table['KeyJ ctrl'], cmds.cursorLineStart);
-  assert.strictEqual(table['KeyL ctrl'], cmds.cursorLineEnd);
+test('ctrl+j and ctrl+l are the markdown sentence motions', () => {
+  // They were line start and end in tracker's table, and that was tracker's own
+  // invention: the top-level README defines these two chords only in its Markdown
+  // editing section, as the sentence motions. The two sets were unified onto that,
+  // the newer behaviour, so there is one layout. If this fails, line start and end
+  // have come back.
+  // The caret on the *second* line of a two-line block, which is the only place
+  // the two candidate behaviours differ: line start is the start of this line,
+  // sentence start is the start of the block above it.
+  const text = 'alpha\nbeta\n\ngamma';
+  const at = text.indexOf('beta') + 2;
 
-  const markdown = markdownBindings(cmds);
-  assert.notStrictEqual(markdown['KeyJ ctrl'], table['KeyJ ctrl']);
-  assert.notStrictEqual(markdown['KeyL ctrl'], table['KeyL ctrl']);
+  const back = runChord(table, 'KeyJ ctrl', text, at);
+  assert.strictEqual(back.delegated, undefined, 'ctrl+j delegated to a CodeMirror command');
+  assert.strictEqual(back.head, sentenceStart(text, at));
+
+  const forward = runChord(table, 'KeyL ctrl', text, at);
+  assert.strictEqual(forward.head, sentenceEnd(text, at));
+
+  // And the distinction is real here, so this fixture can tell them apart.
+  assert.strictEqual(text.lastIndexOf('\n', at) + 1, text.indexOf('beta'), 'line start');
+  assert.strictEqual(sentenceStart(text, at), 0, 'sentence start is the block start');
 });
 
-test('where the two sets overlap they agree, ctrl+j and ctrl+l aside', () => {
-  const markdown = markdownBindings(cmds);
-  for (const [chord, command] of Object.entries(markdown)) {
-    if (chord === 'KeyJ ctrl' || chord === 'KeyL ctrl') continue;
-    if (chord in FENCE_AWARE) {
-      // Separate wrappers, so identity says nothing. What must agree is where
-      // each one sends a prose document.
-      assert.strictEqual(runChord(markdown, chord, 'plain prose here', 4).delegated,
-                         runChord(table, chord, 'plain prose here', 4).delegated,
-                         `${chord} falls back differently in the two sets`);
-      continue;
-    }
-    assert.strictEqual(table[chord], command,
-      `${chord} means different things in the two sets`);
+test('shift+ctrl+j and shift+ctrl+l select as far as ctrl+j and ctrl+l move', () => {
+  // The pair had been CodeMirror's selectLineStart/End. With the unshifted chords
+  // moving by sentence, those would have selected to somewhere the caret never
+  // goes — so they select by sentence too, keeping the anchor where it was.
+  const text = 'alpha\nbeta\n\ngamma';
+  const at = text.indexOf('beta') + 2;
+  for (const [chord, fn] of [['KeyJ ctrl+shift', sentenceStart],
+                             ['KeyL ctrl+shift', sentenceEnd]]) {
+    called.length = 0;
+    const view = fakeView(text, at);
+    table[chord](view);
+    const spec = view.dispatched[0];
+    assert.strictEqual(called.length, 0, chord + ' delegated instead of selecting');
+    assert.strictEqual(spec.selection.head, fn(text, at), chord);
+    assert.strictEqual(spec.selection.anchor, at,
+      chord + ' moved the anchor, so it moved the caret rather than selecting');
   }
 });
 

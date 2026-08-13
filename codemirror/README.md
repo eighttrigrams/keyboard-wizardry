@@ -4,19 +4,22 @@ The scheme as CodeMirror 6 bindings, so the web apps share one implementation of
 it instead of a copy each. A sibling of `vscode/` and `obsidian/`: same scheme,
 another editor.
 
-It covers two sections of the top-level README, as two named sets:
+**One layout, 47 chords, for every app** — `bindings(commands)`. It covers the
+*Normal editing* section of the top-level README together with the *Markdown
+editing* one: the motions and their selecting variants, the delete and line
+operations, page and document navigation, viewport centring, and a hand-rolled
+clipboard.
 
-- **`markdownBindings`** — the eight chords of *Markdown editing*, and the two
-  sentence motions they move by. What blog uses.
-- **`editingBindings`** — the whole of *Normal editing*: 47 chords, including the
-  selection variants, the delete and line operations, page and document
-  navigation, viewport centring, and a hand-rolled clipboard. What tracker uses.
+It was two sets for a while, because tracker had `ctrl+j` / `ctrl+l` as line start
+and end while blog had them as the markdown sentence motions. That turned out to
+be tracker's own invention — the top-level README defines those two chords *only*
+in its Markdown editing section — so the sets were unified onto the documented
+behaviour, and `ctrl+shift+j` / `ctrl+shift+l` select by sentence to match. Where
+the two disagreed, the newer behaviour won.
 
-The two disagree about exactly one thing, and deliberately: **ctrl+j / ctrl+l**
-are the markdown sentence motions in the first and line start / line end in the
-second. That is what the two apps already did, and a binding is somebody's muscle
-memory, so it is not a thing to unify while tidying code. A test asserts the
-disagreement so it cannot be closed by accident.
+(tracker still shows a plain textarea to users who have not turned vim keys on.
+That path does not use this library at all, which is why it is not a second
+layout.)
 
 ## Structural editing, inside a fenced block
 
@@ -51,11 +54,10 @@ that *edits* structure (slurp, barf, drag, kill) is here yet.
 ## What it gives you
 
 ```js
-import {install, markdownBindings, editingBindings,
-        fromTextarea, fromTextareas} from '@eighttrigrams/kw-codemirror';
+import {install, bindings, fromTextarea, fromTextareas} from '@eighttrigrams/kw-codemirror';
 
-install(view, commands);                              // the eight motions
-install(view, commands, editingBindings(commands));   // the whole scheme
+install(view, commands);            // the layout, onto a view you already made
+bindings(commands);                 // the table itself, to read or extend
 fromTextarea(textarea, cm);         // an editor onto a form field
 fromTextareas(document, cm);        // ...onto every textarea[data-editor]
 ```

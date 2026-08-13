@@ -1,6 +1,6 @@
 // The demo page: this folder on its own, with nothing else running.
 //
-//   npm run dev     →  http://127.0.0.1:8021
+//   npm run dev     →  http://127.0.0.1:8027
 //
 // It mounts a CodeMirror with the same extensions blog's Zen overlay uses, puts
 // the bindings on it, and then shows two things blog cannot show you: which
@@ -8,14 +8,14 @@
 // spaces, so they are invisible, and the whole ctrl+j / ctrl+l rule turns on
 // them — a demo that does not draw them is not demonstrating much.
 //
-// Everything below the imports is demo, not library. The library is three files
+// Everything below the imports is demo, not library. The library is a handful of files
 // in ../src and has no dependencies.
 
 import {EditorState, RangeSetBuilder} from '@codemirror/state';
 import {EditorView, Decoration, WidgetType, ViewPlugin} from '@codemirror/view';
 import {keymap} from '@codemirror/view';
 import * as commands from '@codemirror/commands';
-import {install, markdownBindings} from '../src/index.js';
+import {install, bindings} from '../src/index.js';
 
 const B = '  '; // the two spaces that make a hard break, spelled out so an
                 // editor stripping trailing whitespace cannot quietly break it
@@ -135,7 +135,7 @@ install(view, commands);
 
 // Capture on document, which in the capture phase runs before the editor's own
 // listener — so this still sees the chords the library stops from propagating.
-const known = markdownBindings(commands);
+const known = bindings(commands);
 document.addEventListener('keydown', event => {
   const mods = [];
   if (event.altKey) mods.push('alt');

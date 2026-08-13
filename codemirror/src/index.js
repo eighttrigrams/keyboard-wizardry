@@ -1,14 +1,11 @@
 // The package surface.
 //
-//   install(view, commands[, table])
-//                             put the bindings on a mounted EditorView. Without
-//                             a table it installs markdownBindings.
-//   uninstall = install(...)  take them back off
-//   markdownBindings(cmds)    the eight motions — README's "Markdown editing"
-//   editingBindings(cmds)     the whole of "Normal editing", 47 chords, which is
-//                             what tracker uses. Differs on ctrl+j / ctrl+l.
+//   install(view, commands)   put the layout on a mounted EditorView
+//   uninstall = install(...)  take it back off
+//   bindings(commands)        the layout: one table, 47 chords, every app
 //   chord(event)              a keydown event as a chord string, e.g. "KeyJ alt"
 //   motion(fn)                a pure (text, pos) -> pos as a CodeMirror command
+//   selectTo(fn)              the same, but selecting rather than moving
 //   sentenceStart/sentenceEnd the markdown "sentence" motions themselves
 //   fromTextarea(ta, cm)      replace a form's <textarea> with an editor on it
 //   fromTextareas(root, cm)   the same for every marked textarea under root
@@ -17,8 +14,7 @@
 // the part worth testing, and the part a future scheme (structured LISP
 // editing) will grow beside, in its own module.
 
-export {install, markdownBindings, chord, motion, sexpAware} from './bindings.js';
-export {editingBindings} from './editing.js';
+export {install, bindings, chord, motion, selectTo, sexpAware} from './bindings.js';
 export {fenceAt, clojureFenceAt} from './fences.js';
 export {forwardSexp, backwardSexp, forwardDownSexp, forwardUpSexp,
         backwardUpSexp, backwardDownSexp} from './sexp.js';
