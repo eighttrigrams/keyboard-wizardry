@@ -4,11 +4,11 @@ The scheme as CodeMirror 6 bindings, so the web apps share one implementation of
 it instead of a copy each. A sibling of `vscode/` and `obsidian/`: same scheme,
 another editor.
 
-**One layout, 47 chords, for every app** — `bindings(commands)`. It covers the
-*Normal editing* section of the top-level README together with the *Markdown
-editing* one: the motions and their selecting variants, the delete and line
-operations, page and document navigation, viewport centring, and a hand-rolled
-clipboard.
+**One layout, for every app** — `bindings(commands)`. It covers the *Normal
+editing* section of the top-level README together with the *Markdown editing*
+one: the motions and their selecting variants, the delete and line operations,
+page and document navigation, viewport centring, and a hand-rolled clipboard.
+47 chords on a markdown document; 31 on a one-line field. See *Two modes*.
 
 It was two sets for a while, because tracker had `ctrl+j` / `ctrl+l` as line start
 and end while blog had them as the markdown sentence motions. That turned out to
@@ -22,6 +22,72 @@ That path does not use this library at all, which is why it is not a second
 layout. rhizome and treina had tables of their own, word for word the same 47
 chords; they were deleted rather than merged, since there was nothing in them
 this does not do.)
+
+## Two modes
+
+One layout on two shapes of document, which is not the same thing as two layouts:
+
+```js
+install(view, commands)                    // 'document' — the default, 47 chords
+install(view, commands, {mode: 'input'})   // 'input'    — one line, 31 chords
+```
+
+`'document'` is what every consumer had before modes existed, unchanged. `'input'`
+is for a title field or a search box, and what it drops it drops because *the
+document is not there* — never because a chord was reconsidered. No second line,
+so no line motions and nothing to open or move or indent one; no blocks, so no
+sentence motions; no fences, so no structural editing. Everything that is left is
+the same command in both modes, by identity — `sharedBindings` in bindings.js is
+literally the same object, and a test asserts that input mode introduces no chord
+document mode does not have.
+
+Three differences, and no fourth:
+
+| | document | input |
+|---|---|---|
+| `option+j` / `option+l` | word, or form inside a Clojure fence | word, plainly |
+| `ctrl+j` / `ctrl+l` | markdown sentence start / end | line start / end |
+| `cmd+i` `cmd+k` `option+i` `option+k` | up and down | swallowed |
+
+`ctrl+j` and `ctrl+l` are not a second meaning for those chords. In one line the
+sentence motions *already* degenerate to line start and end — no newlines means
+the whole text is one block — so this is the same destination, reached without
+dragging markdown's definition of a block into a field that has none.
+
+The four vertical keys are **swallowed**, not left unbound, which is a choice
+worth knowing about. Bound to a no-op, `install` still preventDefaults them, so
+the app underneath never sees them; the chord is dead everywhere and no app can
+quietly give `cmd+k` a second meaning in a field where the scheme has none. It
+costs something real: tracker binds `option+i` globally to "go to Issues", and in
+a field this swallows it. `DEAD_IN_ONE_LINE` in bindings.js is the one place to
+change if that trade ever wants reversing.
+
+What input mode does **not** touch: Enter, Escape, Tab and the arrows are in
+neither table, so they are neither preventDefaulted nor stopped, and they reach
+whatever the app has on the field. A single-line editor that swallowed Enter
+would be useless in a form.
+
+### The document has to be one line too
+
+The layout says what the keys do; it cannot stop a pasted newline turning the
+field into two lines with half the text hidden. That is `singleLine`:
+
+```js
+install(view, commands, {mode: 'input'});
+extensions: [...singleLine(cm)]     // pair them; a field wants both
+```
+
+Newlines are **flattened, not refused**. Refusing was the first version and it is
+worse than it sounds: the common way a newline reaches a single-line field is a
+paste, and a rejected transaction means the paste silently does nothing at all —
+every character the user wanted dropped because of the one they did not. A break
+becomes a space, the whitespace that sat against it goes with it, and a break at
+either end disappears rather than becoming a space (copying a line selects its
+trailing newline, so almost every real paste ends in one).
+
+The filter only ever sees transactions, so a state *created* with newlines in its
+doc is two lines and nothing was asked about it. `oneLine(text)` is that same
+flattening, exported for sanitising a document before it exists.
 
 ## Structural editing, inside a fenced block
 
@@ -56,13 +122,21 @@ that *edits* structure (slurp, barf, drag, kill) is here yet.
 ## What it gives you
 
 ```js
-import {install, bindings, fromTextarea, fromTextareas} from '@eighttrigrams/kw-codemirror';
+import {install, bindings, singleLine, oneLine,
+        fromTextarea, fromTextareas} from '@eighttrigrams/kw-codemirror';
 
 install(view, commands);            // the layout, onto a view you already made
-bindings(commands);                 // the table itself, to read or extend
+install(view, commands, {mode});    // ...in 'document' (default) or 'input'
+bindings(commands, {mode});         // the table itself, to read or extend
+singleLine(cm);                     // extensions: a doc that stays one line
+oneLine(text);                      // that flattening, for a doc before it exists
 fromTextarea(textarea, cm);         // an editor onto a form field
 fromTextareas(document, cm);        // ...onto every textarea[data-editor]
 ```
+
+An unknown mode throws rather than falling back to the document layout — falling
+back would put line motions and fence scanning in a search box and look very
+nearly right.
 
 `cm` is the CodeMirror namespace *you* have:
 `{EditorState, EditorView, keymap, commands}`. Nothing here imports CodeMirror —
