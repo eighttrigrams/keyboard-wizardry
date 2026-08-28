@@ -8,7 +8,8 @@ another editor.
 editing* section of the top-level README together with the *Markdown editing*
 one: the motions and their selecting variants, the delete and line operations,
 page and document navigation, viewport centring, and a hand-rolled clipboard.
-47 chords on a markdown document; 31 on a one-line field. See *Two modes*.
+47 chords on a markdown document, the same 47 on a text file or a shell script,
+31 on a one-line field. See *Four modes*.
 
 It was two sets for a while, because tracker had `ctrl+j` / `ctrl+l` as line start
 and end while blog had them as the markdown sentence motions. That turned out to
@@ -23,36 +24,69 @@ layout. rhizome and treina had tables of their own, word for word the same 47
 chords; they were deleted rather than merged, since there was nothing in them
 this does not do.)
 
-## Two modes
+## Four modes
 
-One layout on two shapes of document, which is not the same thing as two layouts:
+One layout on four shapes of document, which is not the same thing as four
+layouts:
 
 ```js
-install(view, commands)                    // 'document' — the default, 47 chords
+install(view, commands)                    // 'markdown' — the default, 47 chords
+install(view, commands, {mode: 'text'})    // 'text'     — a .txt, the same 47
+install(view, commands, {mode: 'shell'})   // 'shell'    — a .sh, today == text
 install(view, commands, {mode: 'input'})   // 'input'    — one line, 31 chords
 ```
 
-`'document'` is what every consumer had before modes existed, unchanged. `'input'`
-is for a title field or a search box, and what it drops it drops because *the
-document is not there* — never because a chord was reconsidered. No second line,
-so no line motions and nothing to open or move or indent one; no blocks, so no
-sentence motions; no fences, so no structural editing. Everything that is left is
-the same command in both modes, by identity — `sharedBindings` in bindings.js is
-literally the same object, and a test asserts that input mode introduces no chord
-document mode does not have.
+`'markdown'` is what every consumer had before modes existed, unchanged, and
+`'document'` is still accepted as the name it went by then. What any other mode
+drops or changes, it drops or changes because *the document is not that shape* —
+never because a chord was reconsidered. There is no block in a `.txt`, so there
+is nothing for a block motion to move between; no second line in a field, so
+nothing to open or move or indent one.
 
-Three differences, and no fourth:
+| | markdown | text | shell | input |
+|---|---|---|---|---|
+| `option+j` / `option+l` | word, or form inside a Clojure fence | word, plainly | word, plainly | word, plainly |
+| `option+i` / `option+k` | line, or in and out of a form | line | line | swallowed |
+| `ctrl+j` / `ctrl+l` | block start / end | line start / end | line start / end | line start / end |
+| `cmd+i` / `cmd+k` | up and down | up and down | up and down | swallowed |
+| lines, paging, scrolling | ✓ | ✓ | ✓ | — |
 
-| | document | input |
-|---|---|---|
-| `option+j` / `option+l` | word, or form inside a Clojure fence | word, plainly |
-| `ctrl+j` / `ctrl+l` | markdown sentence start / end | line start / end |
-| `cmd+i` `cmd+k` `option+i` `option+k` | up and down | swallowed |
+Eight chords separate markdown from text, and the other thirty-nine are the same
+command in both — by identity, and a test says so chord by chord. `ctrl+j` and
+`ctrl+l` are not a second meaning: markdown's block start and end already *are*
+line start and end in a document whose blocks are one line, so a text file gets
+the same destination without dragging markdown's definition of a block into a
+file that has none. Input mode reaches it a third time, for the same reason and
+with the same two commands.
 
-`ctrl+j` and `ctrl+l` are not a second meaning for those chords. In one line the
-sentence motions *already* degenerate to line start and end — no newlines means
-the whole text is one block — so this is the same destination, reached without
-dragging markdown's definition of a block into a field that has none.
+**The modes are written as differences, not as four tables.** `sharedBindings` is
+everything true of any document at all; `multiLineBindings` adds what a second
+line makes possible and *is* text mode entire; markdown is that plus eight
+overrides, and shell is that plus nothing:
+
+```
+sharedBindings          char motions, deleting, clipboard, undo
+  multiLineBindings     up and down, line ops, paging, scrolling  ← text
+    markdownBindings    + blocks and fences
+    shellBindings       + nothing, yet
+  inputBindings         one line, eight chords swallowed
+```
+
+So a chord is written once and every mode that has it holds the very same
+function. It also means markdown's fence-aware four fall back, outside a fence,
+to exactly the commands text mode binds — the two are not two behaviours that
+resemble each other, in prose they are one.
+
+### Why `'shell'` exists when it is `'text'`
+
+A shell script has no block a motion could move between and no fenced language
+inside it, so today the two tables are identical and a test asserts it. It is
+named all the same, for the reason that matters: it is where the difference goes
+when there is one — structural motion over an `if`/`fi`, a word motion that does
+not stop inside `$FOO`. On that day `shellBindings` grows a body and every
+consumer that already says `'shell'` gets it. The alternative is finding every
+caller that said `'text'` and deciding, one at a time, which of them meant a
+shell script.
 
 The four vertical keys are **swallowed**, not left unbound, which is a choice
 worth knowing about. Bound to a no-op, `install` still preventDefaults them, so
@@ -126,7 +160,8 @@ import {install, bindings, singleLine, oneLine,
         fromTextarea, fromTextareas} from '@eighttrigrams/kw-codemirror';
 
 install(view, commands);            // the layout, onto a view you already made
-install(view, commands, {mode});    // ...in 'document' (default) or 'input'
+install(view, commands, {mode});    // ...in 'markdown' (default), 'text',
+                                    //    'shell' or 'input'
 bindings(commands, {mode});         // the table itself, to read or extend
 singleLine(cm);                     // extensions: a doc that stays one line
 oneLine(text);                      // that flattening, for a doc before it exists
@@ -134,9 +169,12 @@ fromTextarea(textarea, cm);         // an editor onto a form field
 fromTextareas(document, cm);        // ...onto every textarea[data-editor]
 ```
 
-An unknown mode throws rather than falling back to the document layout — falling
-back would put line motions and fence scanning in a search box and look very
-nearly right.
+An unknown mode throws rather than falling back to the markdown layout — falling
+back would put block motions and fence scanning in a search box and look very
+nearly right. Markdown is the default because it is what every caller that passes
+no mode has always got, and because it is the one of the four most forgiving to
+be wrong about: markdown in a text file costs a fence scan that finds nothing,
+where text in a markdown file silently loses the block motions.
 
 `cm` is the CodeMirror namespace *you* have:
 `{EditorState, EditorView, keymap, commands}`. Nothing here imports CodeMirror —

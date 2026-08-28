@@ -1,4 +1,5 @@
-// The IJKL scheme, as CodeMirror 6 bindings. One table per *mode*, and two modes.
+// The IJKL scheme, as CodeMirror 6 bindings. One table per *mode*, and four
+// modes.
 //
 // It used to be two tables — blog's eight motions and tracker's 47 — which
 // disagreed about ctrl+j and ctrl+l: the markdown "sentence" motions in one, line
@@ -7,20 +8,42 @@
 // the markdown one. So they are the markdown motions now, and where the two sets
 // disagreed the newer behaviour won.
 //
-// The two tables here are not that argument coming back. They are one layout on
-// two shapes of document:
+// The tables here are not that argument coming back — that argument was about
+// what a chord means in *one* kind of document. These are one layout on four
+// kinds:
 //
-//   'document'  the default, and what every consumer had until now: a markdown
-//               document, with blocks to move between and Clojure fences to move
-//               inside. 47 chords.
+//   'markdown'  the default, and what every consumer had before modes existed: a
+//               markdown document, with blocks to move between and Clojure
+//               fences to move inside. 47 chords.
+//   'text'      a text file. The same 47 chords; eight of them do something
+//               simpler, because there are no blocks and no fences. ctrl+j and
+//               ctrl+l are the ends of the *line*, and the option four are the
+//               plain word and line motions that markdown mode already falls
+//               back to everywhere outside a fence.
+//   'shell'     a shell script — .sh and its family. Exactly 'text' today, and
+//               named all the same; see shellBindings for why that is not
+//               ceremony.
 //   'input'     one line, and only one — a title field, a search box. 31 chords.
 //
-// What input mode drops, it drops because the *document* is not there, never
-// because the chord was reconsidered. There is no second line, so there are no
-// line motions and nothing to move a line above or below; no blocks, so no
-// sentence motions; no fences, so no structural editing. What is left is
-// identical to document mode, chord for chord — see sharedBindings below, which
-// is literally the same object in both.
+// What a mode drops or changes, it drops or changes because *the document is not
+// that shape*, never because a chord was reconsidered. There is no block in a
+// text file, so there is nothing for a block motion to move between; there is no
+// second line in a field, so there is nothing to move a line above or below.
+//
+// **Built in layers, so a chord is written once and every mode that has it gets
+// the same one** — by identity, not by two tables that happen to agree today:
+//
+//   sharedBindings         any document at all. The char motions, deleting, the
+//                          clipboard, undo, select-all. cmd+j means the same
+//                          thing in a search box and in a thousand-line file.
+//     multiLineBindings    ...once there is a second line: vertical motion, the
+//                          line operations, paging, scrolling, centring. This
+//                          *is* text mode, and the base the other two documents
+//                          are written as differences from.
+//       markdownBindings   ...+ blocks and fences: eight chords overridden.
+//       shellBindings      ...+ nothing, yet.
+//     inputBindings        ...when there is not: one line, and eight chords
+//                          swallowed.
 //
 // Nothing here imports CodeMirror. The `@codemirror/commands` namespace is
 // handed in instead, for one reason that matters in practice: a bundle with two
@@ -39,8 +62,18 @@ import {copySelection, pasteAtSelection, cutSelection,
         scrollDown, scrollUp, cursorViewportUp, cursorViewportDown,
         centerCaret, centerLine} from './custom-commands.js';
 
-export const DOCUMENT = 'document';
+export const MARKDOWN = 'markdown';
+export const TEXT = 'text';
+export const SHELL = 'shell';
 export const INPUT = 'input';
+
+// The name markdown mode went by when it was the only document mode there was,
+// kept and kept working. It is exported, so a consumer may be spelling it out —
+// and blog ships a *bundle* of this library that re-exports everything on
+// `window.IJKL`, where an old page and a new bundle meet. `bindings` resolves it
+// to the markdown layout, which is what it always was: markdown mode is not a
+// new behaviour, it is the old one with a name that says which of four it is.
+export const DOCUMENT = 'document';
 
 // Keyed on e.code, never e.key: on macOS Option is a compose modifier, so
 // option+j arrives as e.key "∆". An e.key map would fail silently for
@@ -66,8 +99,8 @@ export function motion(fn) {
 
 // The same motion, selecting: the anchor stays where it was and only the head
 // moves, which is what makes shift+chord mean "select as far as chord would go".
-// Needed because ctrl+j and ctrl+l are no longer line start and end — their
-// shifted pair had been CodeMirror's selectLineStart/End, and leaving those
+// Needed because ctrl+j and ctrl+l are not line start and end in markdown mode —
+// their shifted pair had been CodeMirror's selectLineStart/End, and leaving those
 // behind would have meant shift+ctrl+j selecting somewhere ctrl+j never goes.
 export function selectTo(fn) {
   return function (view) {
@@ -82,6 +115,10 @@ export function selectTo(fn) {
 // block — which is what makes structural editing bindable on keys that are
 // already spoken for. Outside such a block the fallback runs and nothing has
 // changed; inside one, movement is by form and cannot leave the block.
+//
+// The fallbacks handed in below are, deliberately, the very commands text mode
+// binds those keys to. So "markdown mode outside a fence" and "text mode" are
+// the same key doing the same thing, and not two spellings of nearly that.
 //
 // The senses are Calva's, since that is what the VSCode keymap binds and it is
 // the same hands here: option+l over the next form, option+j over the previous,
@@ -121,8 +158,8 @@ const DEAD_IN_ONE_LINE = [
 ];
 
 // The chords that mean exactly the same thing whether the document is one line or
-// a thousand. Both tables are built on this, so a change here cannot land in one
-// mode and miss the other.
+// a thousand, prose or a shell script. Every table here is built on this, so a
+// change to one of these cannot land in one mode and miss the others.
 function sharedBindings(commands) {
   return {
     // Motion, and the same selecting
@@ -151,30 +188,41 @@ function sharedBindings(commands) {
   };
 }
 
-// A markdown document: blocks to move between, fences to move inside, lines to
-// move and open and indent. This is the layout every consumer had before there
-// were modes, unchanged.
-export function documentBindings(commands) {
+// Everything that exists because there is a second line: somewhere to move up
+// and down to, lines to open and move and indent, pages to turn, a viewport
+// taller than the caret.
+//
+// This is the whole of text mode, and the base of markdown's and shell's. The
+// motions here are the *plain* ones — word left and right, line up and down,
+// the ends of the line — because those are what a document with no blocks and
+// no fenced code in it can offer. A mode that has more says so by overriding,
+// and what it overrides is exactly the list of things markdown knows and a text
+// file does not.
+function multiLineBindings(commands) {
   return Object.assign(sharedBindings(commands), {
-    // The option four move by form inside a ```clojure block and by word or line
-    // everywhere else; ctrl+j and ctrl+l move by markdown "sentence", which is
-    // the line when the one above ended in two spaces and the block otherwise.
+    // Up and down, and the same selecting.
     'KeyI meta': commands.cursorLineUp,
     'KeyK meta': commands.cursorLineDown,
-    'KeyJ alt': sexpAware(backwardSexp, commands.cursorGroupLeft),
-    'KeyL alt': sexpAware(forwardSexp, commands.cursorGroupRight),
-    'KeyI alt': sexpAware(forwardUpSexp, commands.cursorLineUp),
-    'KeyK alt': sexpAware(forwardDownSexp, commands.cursorLineDown),
-    'KeyJ ctrl': motion(sentenceStart),
-    'KeyL ctrl': motion(sentenceEnd),
-
-    // The same, selecting
     'KeyI meta+shift': commands.selectLineUp,
     'KeyK meta+shift': commands.selectLineDown,
     'KeyI alt+shift': commands.selectLineUp,
     'KeyK alt+shift': commands.selectLineDown,
-    'KeyJ ctrl+shift': selectTo(sentenceStart),
-    'KeyL ctrl+shift': selectTo(sentenceEnd),
+
+    // The option four, plainly: by word sideways, by line up and down. In
+    // markdown these are the fence-aware ones and these commands are what they
+    // fall back to.
+    'KeyJ alt': commands.cursorGroupLeft,
+    'KeyL alt': commands.cursorGroupRight,
+    'KeyI alt': commands.cursorLineUp,
+    'KeyK alt': commands.cursorLineDown,
+
+    // The ends of the line. Markdown makes these the ends of the *block*; a
+    // file with no blocks in it has the line, which is the same idea at the
+    // only scale it has.
+    'KeyJ ctrl': commands.cursorLineStart,
+    'KeyL ctrl': commands.cursorLineEnd,
+    'KeyJ ctrl+shift': commands.selectLineStart,
+    'KeyL ctrl+shift': commands.selectLineEnd,
 
     // Lines
     'Enter shift': newLineBelow,
@@ -201,26 +249,86 @@ export function documentBindings(commands) {
   });
 }
 
+// A markdown document: blocks to move between, fences to move inside. The
+// layout every consumer had before there were modes, and still the default.
+//
+// Eight chords, and no ninth. Everything else — up and down, the line
+// operations, paging, the clipboard — is inherited and therefore identical, by
+// identity, to what a text file gets.
+export function markdownBindings(commands) {
+  return Object.assign(multiLineBindings(commands), {
+    // The option four move by form inside a ```clojure block and by word or line
+    // everywhere else, which is exactly what they do in text mode.
+    'KeyJ alt': sexpAware(backwardSexp, commands.cursorGroupLeft),
+    'KeyL alt': sexpAware(forwardSexp, commands.cursorGroupRight),
+    'KeyI alt': sexpAware(forwardUpSexp, commands.cursorLineUp),
+    'KeyK alt': sexpAware(forwardDownSexp, commands.cursorLineDown),
+
+    // ctrl+j and ctrl+l move by markdown "sentence" — the line when the one
+    // above ended in two spaces, and the block otherwise — and their shifted
+    // pair selects as far as they move.
+    'KeyJ ctrl': motion(sentenceStart),
+    'KeyL ctrl': motion(sentenceEnd),
+    'KeyJ ctrl+shift': selectTo(sentenceStart),
+    'KeyL ctrl+shift': selectTo(sentenceEnd)
+  });
+}
+
+// The name this layout had when it was the only document layout there was. Kept
+// as the same function and not as a copy, so nothing can drift between them.
+export const documentBindings = markdownBindings;
+
+// A text file: lines, and nothing above a line.
+//
+// It is the multi-line base with nothing added, and that is the point rather
+// than a gap. `.txt` is the shape everything else here is described as a
+// difference from: markdown is this plus blocks and fences, a shell script is
+// this exactly, a one-line field is this minus the second line.
+export function textBindings(commands) {
+  return multiLineBindings(commands);
+}
+
+// A shell script, and today that is a text file — the spec says so, and it is
+// true: `sh` has no block a motion could move between and no fenced language
+// inside it.
+//
+// **Named anyway, rather than pointing .sh at 'text'.** Two reasons, and the
+// second is the one that matters. It is honest: an editor asked what mode it is
+// in should answer with what it is editing. And it is where the difference goes
+// when there is one — structural motion over a `case`/`esac` or an `if`/`fi`,
+// a word motion that does not stop inside `$FOO`, comment-aware anything. On
+// that day this function grows a body and every consumer that already says
+// 'shell' gets it; the alternative is finding every caller that said 'text' and
+// deciding, one at a time, which of them meant a shell script.
+export function shellBindings(commands) {
+  return multiLineBindings(commands);
+}
+
 // One line: a title, a search box, a URL. Pair it with singleLine() from
 // single-line.js, which is what stops the document becoming two lines behind the
 // layout's back.
 //
-// Three differences from document mode, and no fourth:
+// Built on sharedBindings and not on the multi-line base, because what it wants
+// is nearly none of that: everything to do with a second line is simply absent —
+// no new line above or below, no moving or indenting one, no paging, no
+// scrolling or centring a viewport that is one line tall. Written as an
+// inheritance it would be a list of sixteen deletions, which is a worse way of
+// saying the same thing and a much easier one to get wrong.
 //
-//   the option pair    word motion, plainly. Not fence-aware — there is no
-//                      fenced block in a one-line field, so asking is a document
-//                      scan on every keypress to answer no.
-//   ctrl+j / ctrl+l    line start and end. In one line the sentence motions
-//                      *already* degenerate to exactly this — no newlines means
-//                      the whole text is one block — so this is not a second
-//                      meaning for the chord, it is the same destination reached
-//                      without dragging markdown's definition of a block into a
-//                      field that has none.
+// Three differences from the multi-line modes, and no fourth:
+//
+//   the option pair    word motion, plainly — as in text mode, and for the same
+//                      reason markdown mode would not: there is no fenced block
+//                      in a one-line field, so asking is a document scan on
+//                      every keypress to answer no.
+//   ctrl+j / ctrl+l    line start and end. The same commands text mode binds. In
+//                      one line the markdown sentence motions *already*
+//                      degenerate to exactly this — no newlines means the whole
+//                      text is one block — so this is not a second meaning for
+//                      the chord, it is the same destination reached without
+//                      dragging markdown's definition of a block into a field
+//                      that has none.
 //   the vertical keys  swallowed. See DEAD_IN_ONE_LINE.
-//
-// Everything to do with a second line is simply absent: no new line above or
-// below, no moving or indenting one, no paging, no scrolling or centring a
-// viewport that is one line tall.
 export function inputBindings(commands) {
   const table = Object.assign(sharedBindings(commands), {
     'KeyJ alt': commands.cursorGroupLeft,
@@ -234,28 +342,49 @@ export function inputBindings(commands) {
   return table;
 }
 
+// Every mode, and the table each one builds. 'document' is in here as the old
+// name of 'markdown' and resolves to the same function.
+const LAYOUTS = {
+  [MARKDOWN]: markdownBindings,
+  [TEXT]: textBindings,
+  [SHELL]: shellBindings,
+  [INPUT]: inputBindings,
+  [DOCUMENT]: markdownBindings
+};
+
 // The layout, as chord string -> CodeMirror command. Modifiers are spelled in the
 // order chord() produces them — alt, ctrl, meta, shift — and a key in any other
 // order can never fire, which is why a test checks it.
 //
-//   bindings(commands)                    the markdown document layout
-//   bindings(commands, {mode: 'input'})   the one-line layout
+//   bindings(commands)                       the markdown layout
+//   bindings(commands, {mode: 'text'})       a text file
+//   bindings(commands, {mode: 'shell'})      a shell script
+//   bindings(commands, {mode: 'input'})      a one-line field
+//
+// **Markdown is the default, and that is not only history.** It is what every
+// caller that passes no mode has always got, so modes arriving cannot change any
+// of them; and it is the most forgiving of the four to be wrong about, since it
+// is the only one that adds behaviour rather than removing it — markdown in a
+// text file costs a fence scan that finds nothing, where text in a markdown file
+// silently loses the block motions.
 export function bindings(commands, options) {
-  const mode = (options && options.mode) || DOCUMENT;
-  if (mode === INPUT) return inputBindings(commands);
-  if (mode === DOCUMENT) return documentBindings(commands);
-  // Loudly. A typo'd mode that quietly fell back to the document layout would
-  // put line motions and fence scanning in a search box and look almost right.
-  throw new Error(`unknown editor mode ${JSON.stringify(mode)} — ` +
-                  `expected ${JSON.stringify(DOCUMENT)} or ${JSON.stringify(INPUT)}`);
+  const mode = (options && options.mode) || MARKDOWN;
+  const layout = LAYOUTS[mode];
+  // Loudly. A typo'd mode that quietly fell back to the markdown layout would
+  // put block motions and fence scanning in a search box and look almost right.
+  if (!layout) {
+    throw new Error(`unknown editor mode ${JSON.stringify(mode)} — expected one of ` +
+                    [MARKDOWN, TEXT, SHELL, INPUT].map(m => JSON.stringify(m)).join(', '));
+  }
+  return layout(commands);
 }
 
 // Capture phase on the editor element, rather than a CodeMirror keymap
 // extension, so these win before CodeMirror's own keymaps see the event —
 // which is also how tracker's codemirror.cljs has always done it.
 //
-//   install(view, commands)                    the document layout
-//   install(view, commands, {mode: 'input'})   the one-line layout
+//   install(view, commands)                    the markdown layout
+//   install(view, commands, {mode: 'text'})    ...or any other mode
 //   install(view, commands, {table})           a caller's own table
 //
 // Note what install does *not* touch: Enter, Escape, Tab, the arrows. They are in
