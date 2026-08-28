@@ -16,3 +16,8 @@ Currently the following modes are supported
 4. Shell-likes
     - for sh files etc.
     - currently behaves exactly like text editing
+
+Implementation note: Try to make it such that shared behaviour is 
+modeled by inheritance. I.e. every editor supports the cmd+ijkl
+keybindings in the same way, so we shouldn't need to define this 
+for every editor type.
