@@ -42,9 +42,8 @@ movement to the left, and ctrl+j a jump of the cursor to the beginning of the li
 
 I managed to fight operating systems to make that all possible simultaneously
 on MacOS as well as Ubuntu, but that is a war story for another day.
- 
 
-# Normal editing
+# The core
 
 - cmd+i cursor up
 - cmd+k cursor down
@@ -52,6 +51,9 @@ on MacOS as well as Ubuntu, but that is a war story for another day.
 - cmd+l cursor right
 - option+j wordwise backward
 - option+l wordwise forward
+
+# Normal editing
+
 - ^ - undo
 - shift+^ - redo
 - cmd+9 - save
