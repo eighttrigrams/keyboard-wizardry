@@ -4,18 +4,22 @@ Currently the following modes are supported
 
 1. Markdown - most widely used, on markdown files and on all text fields in plurama knowledge management apps
     - has inline support for other languages inside fenced blocks
-        - currently Clojure only
+        - Clojure
+        - Shell-like (behaviour see below) 
+        - currently no support for any other languages embedded in markdown
     - ctrl + j and ctrl + l jump to beginnings and ends of blocks 
 2. Input fields 
     - ctrl + j and ctrl + l jump to beginnings and ends of input field
 3. Text - for text files
     - *.txt
     - ctrl + j and ctrl + l jump to beginnings and ends of lines
+        - if its at the beginning of a line, next ctrl + j brings cursor to end of previous line, if its at end of line, ctrl + l brings cursor to beginning of next line
     - similar to markdown, but
     - doesnt support block wise navigation
     - doesn't support fenced special syntax handling
 4. Shell-likes
     - *.sh, *.conf, *.conf.template, .*rc (.envrc, .zshrc, .bashrc), 
+    - .gitignore, .dockerignore
     - for sh files etc.
     - currently behaves exactly like text editing
 
