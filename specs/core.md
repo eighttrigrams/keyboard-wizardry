@@ -30,12 +30,20 @@ Small jumps
 - cmd+j left
 - cmd+l right
 
+Medium jumps
+
 - option+i up
 - option+k down
 - option+j left
 - option+l right
 
+Big jumps
+
 - ctrl+i up
 - ctrl+k down
 - ctrl+j left
 - ctrl+l right
+
+The classic **shift** key should work as expected and when held,
+mark the space between here and there, as defined per these jumps,
+or extend or diminish an existing selection in the indicated direction.
