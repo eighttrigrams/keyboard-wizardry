@@ -8,7 +8,8 @@
 
 import {test} from 'node:test';
 import assert from 'node:assert';
-import {sentenceStart, sentenceEnd} from '../src/motions.js';
+import {sentenceStart, sentenceEnd,
+        lineStartOrPrevEnd, lineEndOrNextStart} from '../src/motions.js';
 
 const B = '  ';
 
@@ -118,5 +119,81 @@ test('neither motion ever stands still, anywhere in a mixed document', () => {
     assert.ok(fwd > pos || pos === text.length,
       `forward from ${pos} gave ${fwd}`);
     assert.ok(back >= 0 && fwd <= text.length, 'both stay inside the document');
+  }
+});
+
+// --- the line motions, ctrl+j and ctrl+l in a text file or a shell script -----
+//
+// Same caret convention. The whole of what these add to CodeMirror's
+// cursorLineStart and cursorLineEnd is the second press: standing on the end you
+// asked for, you get the neighbouring line rather than nothing at all.
+
+function landsOn(motion, from, to, bounds) {
+  const [text, pos] = unmark(from);
+  const [same, want] = unmark(to);
+  assert.strictEqual(text, same, 'the two fixtures are not the same text');
+  const got = bounds ? motion(text, pos, bounds[0], bounds[1]) : motion(text, pos);
+  assert.strictEqual(got, want,
+    `${JSON.stringify(from)}\n  landed ${got}, wanted ${want}`);
+}
+
+test('ctrl+j goes to the start of the line', () => {
+  landsOn(lineStartOrPrevEnd, 'alpha\nbe|ta\ngamma', 'alpha\n|beta\ngamma');
+  landsOn(lineStartOrPrevEnd, 'alpha\nbeta|\ngamma', 'alpha\n|beta\ngamma');
+});
+
+test('and pressed there again, to the end of the line above', () => {
+  // The end and not the start: ctrl+j was heading left, so it keeps heading left.
+  landsOn(lineStartOrPrevEnd, 'alpha\n|beta\ngamma', 'alpha|\nbeta\ngamma');
+  landsOn(lineStartOrPrevEnd, 'alpha\nbeta\n|gamma', 'alpha\nbeta|\ngamma');
+});
+
+test('ctrl+l goes to the end of the line, then to the start of the one below', () => {
+  landsOn(lineEndOrNextStart, 'alpha\nbe|ta\ngamma', 'alpha\nbeta|\ngamma');
+  landsOn(lineEndOrNextStart, 'alpha\nbeta|\ngamma', 'alpha\nbeta\n|gamma');
+});
+
+test('the two ends of the document are where they stop', () => {
+  landsOn(lineStartOrPrevEnd, '|alpha\nbeta', '|alpha\nbeta');
+  landsOn(lineEndOrNextStart, 'alpha\nbeta|', 'alpha\nbeta|');
+});
+
+test('a document that ends in a newline has one more line, and ctrl+l reaches it', () => {
+  // Not a bounded region: the empty last line of a file is a real place for the
+  // caret to be, and a motion that could not get there would be wrong about the
+  // most ordinary file there is.
+  landsOn(lineEndOrNextStart, 'alpha\nbeta|\n', 'alpha\nbeta\n|');
+  landsOn(lineStartOrPrevEnd, 'alpha\nbeta\n|', 'alpha\nbeta|\n');
+});
+
+test('an empty line is its own start and its own end', () => {
+  landsOn(lineStartOrPrevEnd, 'alpha\n|\ngamma', 'alpha|\n\ngamma');
+  landsOn(lineEndOrNextStart, 'alpha\n|\ngamma', 'alpha\n\n|gamma');
+});
+
+test('given bounds, neither motion leaves them', () => {
+  // What a caret inside a fenced block gets. `to` is one past the body's last
+  // character, so a body ending in a newline ends *at* that newline — the line
+  // after it is the closing ```, which is not the block.
+  const text = '```sh\necho a\necho b\n```\n';
+  const from = text.indexOf('echo a');
+  const to = text.lastIndexOf('```');
+  const b = text.indexOf('echo b');
+  assert.strictEqual(lineStartOrPrevEnd(text, from, from, to), from, 'up and out of the opener');
+  assert.strictEqual(lineEndOrNextStart(text, to - 1, from, to), to - 1, 'down and out of the closer');
+  assert.strictEqual(lineStartOrPrevEnd(text, b, from, to), b - 1, 'inside, the lines are neighbours');
+  assert.strictEqual(lineEndOrNextStart(text, from + 6, from, to), b, '...in both directions');
+});
+
+test('neither line motion ever moves past an end, from anywhere at all', () => {
+  const text = 'alpha\n\nbeta gamma\n\n\ndelta\n';
+  for (let pos = 0; pos <= text.length; pos++) {
+    const back = lineStartOrPrevEnd(text, pos);
+    const fwd = lineEndOrNextStart(text, pos);
+    assert.ok(back <= pos, `backward from ${pos} gave ${back}`);
+    assert.ok(fwd >= pos, `forward from ${pos} gave ${fwd}`);
+    assert.ok(back >= 0 && fwd <= text.length, 'both stay inside the document');
+    assert.ok(back < pos || pos === 0, `backward stood still at ${pos}`);
+    assert.ok(fwd > pos || pos === text.length, `forward stood still at ${pos}`);
   }
 });

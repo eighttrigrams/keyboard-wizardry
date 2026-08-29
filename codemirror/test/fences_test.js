@@ -6,7 +6,7 @@
 
 import {test} from 'node:test';
 import assert from 'node:assert';
-import {fenceAt, clojureFenceAt} from '../src/fences.js';
+import {fenceAt, clojureFenceAt, shellFenceAt} from '../src/fences.js';
 
 function unmark(marked) {
   const pos = marked.indexOf('|');
@@ -95,4 +95,28 @@ test('clojureFenceAt answers only for the lisp languages', () => {
   }
   const [prose, at] = unmark('no fence |here');
   assert.strictEqual(clojureFenceAt(prose, at), null);
+});
+
+test('a shell-like fence is the second language, and js is not a third', () => {
+  // The set mirrors the extensions that open in shell mode, so a fenced block and
+  // a file holding the same text do not disagree about what ctrl+j does.
+  for (const lang of ['sh', 'bash', 'zsh', 'shell', 'console', 'conf', 'gitignore']) {
+    const [text, pos] = unmark('```' + lang + '\necho |a\n```');
+    assert.ok(shellFenceAt(text, pos), lang + ' should count');
+  }
+  for (const lang of ['js', 'json', 'python', 'clojure', 'toml', 'yaml', 'c', '']) {
+    const [text, pos] = unmark('```' + lang + '\necho |a\n```');
+    assert.strictEqual(shellFenceAt(text, pos), null, lang + ' should not count');
+  }
+  const [prose, at] = unmark('no fence |here');
+  assert.strictEqual(shellFenceAt(prose, at), null);
+});
+
+test('the two fence languages never claim the same block', () => {
+  // They are bound to different chords, so a block answering yes to both would be
+  // two different documents at once depending on which key you pressed.
+  for (const lang of ['sh', 'clojure', 'edn', 'bash', 'js']) {
+    const [text, pos] = unmark('```' + lang + '\n(a |b)\n```');
+    assert.ok(!(shellFenceAt(text, pos) && clojureFenceAt(text, pos)), lang);
+  }
 });

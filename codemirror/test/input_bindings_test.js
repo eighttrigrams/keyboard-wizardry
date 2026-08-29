@@ -8,8 +8,8 @@
 
 import {test} from 'node:test';
 import assert from 'node:assert';
-import {bindings, documentBindings, inputBindings, swallow,
-        DOCUMENT, INPUT} from '../src/bindings.js';
+import {bindings, documentBindings, inputBindings, textBindings, swallow,
+        DOCUMENT, INPUT, TEXT} from '../src/bindings.js';
 
 function stubCommands() {
   const made = new Map();
@@ -28,6 +28,7 @@ function stubCommands() {
 const cmds = stubCommands();
 const input = bindings(cmds, {mode: INPUT});
 const document_ = bindings(cmds);
+const text = bindings(cmds, {mode: TEXT});
 
 // The chords that exist because there is a second line. Input mode has none of
 // them, and this is the list — spelled out rather than derived, so that adding a
@@ -136,14 +137,34 @@ test('the option pair is plain word motion, not fence-aware', () => {
     'document mode stopped being fence-aware');
 });
 
-test('ctrl+j and ctrl+l are line start and end, and their shifted pair selects there', () => {
-  assert.strictEqual(input['KeyJ ctrl'], cmds.cursorLineStart);
-  assert.strictEqual(input['KeyL ctrl'], cmds.cursorLineEnd);
-  assert.strictEqual(input['KeyJ ctrl+shift'], cmds.selectLineStart);
-  assert.strictEqual(input['KeyL ctrl+shift'], cmds.selectLineEnd);
+test('ctrl+j and ctrl+l are the ends of the line, and their shifted pair selects there', () => {
+  // The library's own line motions rather than CodeMirror's cursorLineStart, and
+  // **the very same objects text mode holds** — a one-line field is a text file
+  // with one line in it, so the two must not be able to drift.
+  assert.strictEqual(input['KeyJ ctrl'], text['KeyJ ctrl']);
+  assert.strictEqual(input['KeyL ctrl'], text['KeyL ctrl']);
+  assert.strictEqual(input['KeyJ ctrl+shift'], text['KeyJ ctrl+shift']);
+  assert.strictEqual(input['KeyL ctrl+shift'], text['KeyL ctrl+shift']);
   // And in document mode they are still the sentence motions, which is the
   // distinction the whole README argument was about.
-  assert.notStrictEqual(document_['KeyJ ctrl'], cmds.cursorLineStart);
+  assert.notStrictEqual(document_['KeyJ ctrl'], input['KeyJ ctrl']);
+});
+
+test('the step-to-the-next-line half of them cannot fire in one line', () => {
+  // Which is why sharing the commands with text mode costs nothing here. The
+  // motion only leaves the line it is on when there is a line to leave it for,
+  // and singleLine() is what guarantees there is not.
+  const one = 'alpha beta gamma';
+  const view = () => {
+    const d = [];
+    return {dispatched: d,
+            state: {doc: {toString: () => one, length: one.length},
+                    selection: {main: {head: 0, anchor: 0}}},
+            dispatch: s => d.push(s)};
+  };
+  const v = view();
+  input['KeyJ ctrl'](v);                       // already at the start of the only line
+  assert.strictEqual(v.dispatched[0].selection.head, 0, 'it went somewhere there is nowhere to go');
 });
 
 test('the vertical keys are swallowed, not left unbound', () => {

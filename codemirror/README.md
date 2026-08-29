@@ -47,7 +47,7 @@ nothing to open or move or indent one.
 |---|---|---|---|---|
 | `option+j` / `option+l` | word, or form inside a Clojure fence | word, plainly | word, plainly | word, plainly |
 | `option+i` / `option+k` | line, or in and out of a form | line | line | swallowed |
-| `ctrl+j` / `ctrl+l` | block start / end | line start / end | line start / end | line start / end |
+| `ctrl+j` / `ctrl+l` | block start / end, or the line inside a shell-like fence | line start / end, then the neighbouring line | the same | the same, with no neighbouring line to reach |
 | `cmd+i` / `cmd+k` | up and down | up and down | up and down | swallowed |
 | lines, paging, scrolling | ✓ | ✓ | ✓ | — |
 
@@ -57,7 +57,36 @@ command in both — by identity, and a test says so chord by chord. `ctrl+j` and
 line start and end in a document whose blocks are one line, so a text file gets
 the same destination without dragging markdown's definition of a block into a
 file that has none. Input mode reaches it a third time, for the same reason and
-with the same two commands.
+holding the very same two functions.
+
+**Pressed again, they step to the neighbouring line.** `ctrl+j` from the start of
+a line goes to the *end* of the one above — leftwards, which is where it was
+already heading — and `ctrl+l` from the end of a line to the start of the one
+below. CodeMirror's own `cursorLineStart` stops dead there, which makes the
+second press a no-op at exactly the place it is most natural to press: your hand
+is on the key because you just used it. So text and shell mode bind the
+library's own motions instead (`lineStartOrPrevEnd`, `lineEndOrNextStart`), and
+their shifted pair is the same motion handed to `selectTo` — one definition, so
+`shift+ctrl+j` cannot select somewhere `ctrl+j` never goes.
+
+### Two languages inside a fence, and no third
+
+A fenced block is a document of another kind inside this one, and a chord should
+mean there what it means in a file of that kind. Markdown mode knows two:
+
+| fence | what changes | why |
+|---|---|---|
+| ```` ```clojure ```` (also `clj`, `cljs`, `cljc`, `edn`) | `option+j/l/i/k` move by form | there is reader syntax to move over |
+| ```` ```sh ```` (also `bash`, `zsh`, `ksh`, `fish`, `shell`, `console`, `conf`, `env`, `gitignore`, `dockerignore`) | `ctrl+j` / `ctrl+l` are the ends of the *line* | a code block has no blank line in it, so "the end of this block" is the far side of the whole listing |
+
+Everything else — ```` ```js ````, ```` ```python ````, an unlabelled fence —
+keeps the prose bindings. That is the safe direction to be wrong in: block
+motions in a code block are a nuisance for one keypress, where line motions in
+prose would quietly lose the one thing markdown mode is for.
+
+Both are **confined to the block**, so neither can step out onto the closing
+fence: `ctrl+j` at the top line of a `sh` block stays there rather than landing
+in the prose above it.
 
 **The modes are written as differences, not as four tables.** `sharedBindings` is
 everything true of any document at all; `multiLineBindings` adds what a second
@@ -79,8 +108,9 @@ resemble each other, in prose they are one.
 
 ### Why `'shell'` exists when it is `'text'`
 
-A shell script has no block a motion could move between and no fenced language
-inside it, so today the two tables are identical and a test asserts it. It is
+A shell script — `.sh` and its family, `.conf` and `.conf.template`, a dot-rc
+file, `.gitignore` — has no block a motion could move between and no fenced
+language inside it, so today the two tables are identical and a test asserts it. It is
 named all the same, for the reason that matters: it is where the difference goes
 when there is one — structural motion over an `if`/`fi`, a word motion that does
 not stop inside `$FOO`. On that day `shellBindings` grows a body and every

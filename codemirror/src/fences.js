@@ -77,3 +77,23 @@ export function clojureFenceAt(text, pos) {
   const fence = fenceAt(text, pos);
   return fence && LISP.has(fence.lang) ? fence : null;
 }
+
+// The languages whose blocks are shell-like, so that ctrl+j and ctrl+l inside one
+// are the ends of the *line* rather than of the markdown block. The list mirrors
+// the file extensions that open in shell mode — .sh and its family, .conf, the
+// dot-rc files, the ignore files — because a fenced block and a file holding the
+// same text should not disagree about what a chord does.
+//
+// **Short on purpose.** The spec says Clojure and shell-like and no third, and a
+// fence language that is not in either set keeps the prose bindings. That is the
+// safe direction to be wrong in: the block motions in a code block are a nuisance
+// for one keypress, where line motions in prose would quietly lose the one thing
+// markdown mode is for.
+const SHELLISH = new Set(['sh', 'bash', 'zsh', 'ksh', 'fish', 'shell', 'console',
+                          'shell-session', 'shellsession', 'conf', 'env', 'dotenv',
+                          'envrc', 'gitignore', 'dockerignore']);
+
+export function shellFenceAt(text, pos) {
+  const fence = fenceAt(text, pos);
+  return fence && SHELLISH.has(fence.lang) ? fence : null;
+}

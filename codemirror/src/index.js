@@ -8,6 +8,7 @@
 //   motion(fn)                     a pure (text, pos) -> pos as a CodeMirror command
 //   selectTo(fn)                   the same, but selecting rather than moving
 //   sentenceStart/sentenceEnd      the markdown "sentence" motions themselves
+//   lineStartOrPrevEnd/...NextStart  the line motions text and shell mode use
 //   singleLine(cm)                 extensions making a document that stays one line
 //   oneLine(text)                  that same flattening, for a doc before it exists
 //   fromTextarea(ta, cm)           replace a form's <textarea> with an editor on it
@@ -31,11 +32,12 @@
 export {install, bindings,
         markdownBindings, textBindings, shellBindings, inputBindings,
         documentBindings,
-        chord, motion, selectTo, sexpAware, swallow,
+        chord, motion, selectTo, sexpAware, inShellFence, swallow,
         MARKDOWN, TEXT, SHELL, INPUT, DOCUMENT} from './bindings.js';
 export {singleLine, noNewlines, oneLine} from './single-line.js';
-export {fenceAt, clojureFenceAt} from './fences.js';
+export {fenceAt, clojureFenceAt, shellFenceAt} from './fences.js';
 export {forwardSexp, backwardSexp, forwardDownSexp, forwardUpSexp,
         backwardUpSexp, backwardDownSexp} from './sexp.js';
-export {sentenceStart, sentenceEnd} from './motions.js';
+export {sentenceStart, sentenceEnd,
+        lineStartOrPrevEnd, lineEndOrNextStart} from './motions.js';
 export {fromTextarea, fromTextareas} from './textarea.js';

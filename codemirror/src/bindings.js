@@ -17,12 +17,13 @@
 //               fences to move inside. 47 chords.
 //   'text'      a text file. The same 47 chords; eight of them do something
 //               simpler, because there are no blocks and no fences. ctrl+j and
-//               ctrl+l are the ends of the *line*, and the option four are the
-//               plain word and line motions that markdown mode already falls
-//               back to everywhere outside a fence.
-//   'shell'     a shell script — .sh and its family. Exactly 'text' today, and
-//               named all the same; see shellBindings for why that is not
-//               ceremony.
+//               ctrl+l are the ends of the *line* — and, pressed again from
+//               there, the end of the line above and the start of the one below —
+//               and the option four are the plain word and line motions that
+//               markdown mode already falls back to everywhere outside a fence.
+//   'shell'     a shell script — .sh, .conf, a dot-rc file, an ignore file.
+//               Exactly 'text' today, and named all the same; see shellBindings
+//               for why that is not ceremony.
 //   'input'     one line, and only one — a title field, a search box. 31 chords.
 //
 // What a mode drops or changes, it drops or changes because *the document is not
@@ -40,7 +41,11 @@
 //                          line operations, paging, scrolling, centring. This
 //                          *is* text mode, and the base the other two documents
 //                          are written as differences from.
-//       markdownBindings   ...+ blocks and fences: eight chords overridden.
+//       markdownBindings   ...+ blocks and fences: eight chords overridden. Two
+//                          languages are understood inside a fence, and only two:
+//                          Clojure, where the option four move by form, and
+//                          shell-like, where the ctrl pair goes back to being the
+//                          ends of the line.
 //       shellBindings      ...+ nothing, yet.
 //     inputBindings        ...when there is not: one line, and eight chords
 //                          swallowed.
@@ -54,8 +59,9 @@
 //
 // So this package has no dependencies. That is deliberate.
 
-import {sentenceStart, sentenceEnd} from './motions.js';
-import {clojureFenceAt} from './fences.js';
+import {sentenceStart, sentenceEnd,
+        lineStartOrPrevEnd, lineEndOrNextStart} from './motions.js';
+import {clojureFenceAt, shellFenceAt} from './fences.js';
 import {forwardSexp, backwardSexp, forwardDownSexp, forwardUpSexp} from './sexp.js';
 import {copySelection, pasteAtSelection, cutSelection,
         newLineBelow, newLineAbove,
@@ -134,6 +140,38 @@ export function sexpAware(motion, fallback) {
     return true;
   };
 }
+
+// The ctrl pair, once markdown has a second language it understands inside a
+// fence. Composed rather than wrapped: this returns a *pure* motion, still
+// (text, pos) -> pos, so motion() and selectTo() put it on the keys exactly as
+// they put the sentence motions there — and shift+ctrl+j goes on selecting as far
+// as ctrl+j moves without a second decision being made anywhere.
+//
+// The fence's own bounds are handed on, so a line motion inside a block cannot
+// step out onto the closing ``` — the same confinement the sexp motions have, and
+// for the same reason: a chord that means "the neighbouring line" should not, at
+// the edge, mean "leave the code".
+export function inShellFence(shellward, proseward) {
+  return function (text, pos) {
+    const fence = shellFenceAt(text, pos);
+    return fence ? shellward(text, pos, fence.from, fence.to) : proseward(text, pos);
+  };
+}
+
+// **Built once, not once per table.** These need no `commands` namespace, so
+// there is no reason for two builds of a mode to hold two closures that behave
+// alike — and every reason not to: it is what lets text mode's ctrl+j and input
+// mode's be the very same object, which is a claim a test can make by identity
+// rather than by running both and comparing.
+const lineBack = motion(lineStartOrPrevEnd);
+const lineForward = motion(lineEndOrNextStart);
+const selectLineBack = selectTo(lineStartOrPrevEnd);
+const selectLineForward = selectTo(lineEndOrNextStart);
+
+const proseBack = motion(inShellFence(lineStartOrPrevEnd, sentenceStart));
+const proseForward = motion(inShellFence(lineEndOrNextStart, sentenceEnd));
+const selectProseBack = selectTo(inShellFence(lineStartOrPrevEnd, sentenceStart));
+const selectProseForward = selectTo(inShellFence(lineEndOrNextStart, sentenceEnd));
 
 // A chord that is bound to nothing happening. Not the same as an unbound chord:
 // install() preventDefaults and stops anything it finds in the table, so this
@@ -217,12 +255,18 @@ function multiLineBindings(commands) {
     'KeyK alt': commands.cursorLineDown,
 
     // The ends of the line. Markdown makes these the ends of the *block*; a
-    // file with no blocks in it has the line, which is the same idea at the
-    // only scale it has.
-    'KeyJ ctrl': commands.cursorLineStart,
-    'KeyL ctrl': commands.cursorLineEnd,
-    'KeyJ ctrl+shift': commands.selectLineStart,
-    'KeyL ctrl+shift': commands.selectLineEnd,
+    // file with no blocks in it has the line, which is the same idea at the only
+    // scale it has.
+    //
+    // Not CodeMirror's cursorLineStart/End, because those stop dead once the
+    // caret is already at the end they name. These step on to the neighbouring
+    // line instead — ctrl+j from the start of a line to the end of the one above,
+    // ctrl+l from the end of a line to the start of the one below — so the second
+    // press does something and the pair walks the file. See motions.js.
+    'KeyJ ctrl': lineBack,
+    'KeyL ctrl': lineForward,
+    'KeyJ ctrl+shift': selectLineBack,
+    'KeyL ctrl+shift': selectLineForward,
 
     // Lines
     'Enter shift': newLineBelow,
@@ -267,10 +311,17 @@ export function markdownBindings(commands) {
     // ctrl+j and ctrl+l move by markdown "sentence" — the line when the one
     // above ended in two spaces, and the block otherwise — and their shifted
     // pair selects as far as they move.
-    'KeyJ ctrl': motion(sentenceStart),
-    'KeyL ctrl': motion(sentenceEnd),
-    'KeyJ ctrl+shift': selectTo(sentenceStart),
-    'KeyL ctrl+shift': selectTo(sentenceEnd)
+    //
+    // Except inside a shell-like fence, where they are the line motions a shell
+    // script gets, confined to the block. Same idea as the option four one line
+    // up: a fence is a document of another kind inside this one, and the chord
+    // should mean there what it means in a file of that kind. The block motions
+    // are actively wrong in a code block — no blank lines in it, so "the end of
+    // this block" is the far side of the whole listing.
+    'KeyJ ctrl': proseBack,
+    'KeyL ctrl': proseForward,
+    'KeyJ ctrl+shift': selectProseBack,
+    'KeyL ctrl+shift': selectProseForward
   });
 }
 
@@ -321,22 +372,24 @@ export function shellBindings(commands) {
 //                      reason markdown mode would not: there is no fenced block
 //                      in a one-line field, so asking is a document scan on
 //                      every keypress to answer no.
-//   ctrl+j / ctrl+l    line start and end. The same commands text mode binds. In
-//                      one line the markdown sentence motions *already*
-//                      degenerate to exactly this — no newlines means the whole
-//                      text is one block — so this is not a second meaning for
-//                      the chord, it is the same destination reached without
-//                      dragging markdown's definition of a block into a field
-//                      that has none.
+//   ctrl+j / ctrl+l    line start and end. The same commands text mode binds —
+//                      the same objects, not a second spelling — and in one line
+//                      the step-to-the-neighbouring-line half of them can never
+//                      fire, because there is no neighbouring line. In one line
+//                      the markdown sentence motions *already* degenerate to
+//                      exactly this destination, so this is not a second meaning
+//                      for the chord; it is the same one reached without dragging
+//                      markdown's definition of a block into a field that has
+//                      none.
 //   the vertical keys  swallowed. See DEAD_IN_ONE_LINE.
 export function inputBindings(commands) {
   const table = Object.assign(sharedBindings(commands), {
     'KeyJ alt': commands.cursorGroupLeft,
     'KeyL alt': commands.cursorGroupRight,
-    'KeyJ ctrl': commands.cursorLineStart,
-    'KeyL ctrl': commands.cursorLineEnd,
-    'KeyJ ctrl+shift': commands.selectLineStart,
-    'KeyL ctrl+shift': commands.selectLineEnd
+    'KeyJ ctrl': lineBack,
+    'KeyL ctrl': lineForward,
+    'KeyJ ctrl+shift': selectLineBack,
+    'KeyL ctrl+shift': selectLineForward
   });
   for (const dead of DEAD_IN_ONE_LINE) table[dead] = swallow;
   return table;

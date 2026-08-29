@@ -153,15 +153,48 @@ test('and 39 of them are the very same command', () => {
 });
 
 test('what a text file loses is blocks and fences, and nothing else', () => {
-  // The eight, one at a time, so a failure names which.
+  // The option four, one at a time, so a failure names which: plain word and line
+  // motion, taken straight off the commands namespace.
   assert.strictEqual(text['KeyJ alt'], cmds.cursorGroupLeft);
   assert.strictEqual(text['KeyL alt'], cmds.cursorGroupRight);
   assert.strictEqual(text['KeyI alt'], cmds.cursorLineUp);
   assert.strictEqual(text['KeyK alt'], cmds.cursorLineDown);
-  assert.strictEqual(text['KeyJ ctrl'], cmds.cursorLineStart);
-  assert.strictEqual(text['KeyL ctrl'], cmds.cursorLineEnd);
-  assert.strictEqual(text['KeyJ ctrl+shift'], cmds.selectLineStart);
-  assert.strictEqual(text['KeyL ctrl+shift'], cmds.selectLineEnd);
+  // The ctrl pair is the library's own, because CodeMirror has no command for
+  // "the end of the line, or the line above if I am already there".
+  const doc = 'alpha\nbeta\ngamma';
+  const at = i => runChord(text, 'KeyJ ctrl', doc, i).head;
+  assert.strictEqual(at(doc.indexOf('beta') + 2), doc.indexOf('beta'), 'to the start of the line');
+  assert.strictEqual(at(doc.indexOf('beta')), doc.indexOf('beta') - 1, 'then to the end of the one above');
+  const to = i => runChord(text, 'KeyL ctrl', doc, i).head;
+  assert.strictEqual(to(doc.indexOf('beta') + 2), doc.indexOf('beta') + 4, 'to the end of the line');
+  assert.strictEqual(to(doc.indexOf('beta') + 4), doc.indexOf('gamma'), 'then to the start of the one below');
+});
+
+test('the ctrl pair walks the file rather than jamming at an end', () => {
+  // The one thing that changed about text mode. cursorLineStart is a no-op once
+  // the caret is at the start of the line — pressed twice from the middle of a
+  // line it goes somewhere and then nowhere, which reads as a key that stopped
+  // working. These keep going.
+  const doc = 'alpha\nbeta\ngamma';
+  let pos = doc.indexOf('beta') + 2;
+  const walked = [];
+  for (let i = 0; i < 4; i++) { pos = runChord(text, 'KeyJ ctrl', doc, pos).head; walked.push(pos); }
+  assert.deepStrictEqual(walked, [6, 5, 0, 0], 'start of beta, end of alpha, start of alpha, and there it stops');
+});
+
+test('shift+ctrl selects exactly as far as ctrl moves, in every mode', () => {
+  // Not a separate definition: selectTo() is handed the same pure motion motion()
+  // is, so the two cannot disagree about where the chord goes.
+  const doc = 'alpha\nbeta\n\ngamma';
+  for (const [name, table] of [['text', text], ['shell', shell], ['markdown', markdown]]) {
+    for (const [move, select] of [['KeyJ ctrl', 'KeyJ ctrl+shift'],
+                                  ['KeyL ctrl', 'KeyL ctrl+shift']]) {
+      const at = doc.indexOf('beta') + 2;
+      assert.strictEqual(runChord(table, select, doc, at).head,
+                         runChord(table, move, doc, at).head,
+                         `${name}: ${select} does not select as far as ${move} moves`);
+    }
+  }
 });
 
 test('text mode is what markdown mode already does outside a fence', () => {
@@ -193,8 +226,48 @@ test('the ctrl pair is the ends of the line, and the block is what markdown adds
   // of this line" and "start of this block" are different answers.
   const doc = 'alpha\nbeta\n\ngamma';
   const at = doc.indexOf('beta') + 2;
-  assert.strictEqual(runChord(text, 'KeyJ ctrl', doc, at).delegated, 'cursorLineStart');
+  assert.strictEqual(runChord(text, 'KeyJ ctrl', doc, at).head, doc.indexOf('beta'), 'text went to the line');
   assert.strictEqual(runChord(markdown, 'KeyJ ctrl', doc, at).head, 0, 'markdown went to the block');
+});
+
+test('a shell-like fence is a shell script, and the ctrl pair says so', () => {
+  // The second language markdown mode understands inside a fence, and the whole
+  // of what it changes. In a code block there are no blank lines, so markdown's
+  // "end of this block" is the far side of the entire listing — which is the
+  // wrong answer often enough to be worth a rule.
+  const doc = '# title\n\n```sh\necho a\necho b\n```\n\nafter\n';
+  const b = doc.indexOf('echo b');
+  assert.strictEqual(runChord(markdown, 'KeyJ ctrl', doc, b + 2).head, b, 'to the start of the code line');
+  assert.strictEqual(runChord(markdown, 'KeyL ctrl', doc, b + 2).head, b + 6, 'to the end of it');
+});
+
+test('and it may not step out of the block it is in', () => {
+  // The same confinement the sexp motions have. A chord meaning "the neighbouring
+  // line" should not, at the edge of a fence, mean "leave the code".
+  const doc = '# title\n\n```sh\necho a\necho b\n```\n\nafter\n';
+  const a = doc.indexOf('echo a'), b = doc.indexOf('echo b');
+  assert.strictEqual(runChord(markdown, 'KeyJ ctrl', doc, a).head, a, 'up and out of the opening fence');
+  assert.strictEqual(runChord(markdown, 'KeyL ctrl', doc, b + 6).head, b + 6, 'down and out of the closing one');
+  // ...but inside it, the two lines are neighbours as they would be in a .sh.
+  assert.strictEqual(runChord(markdown, 'KeyJ ctrl', doc, b).head, b - 1, 'to the end of the line above');
+  assert.strictEqual(runChord(markdown, 'KeyL ctrl', doc, a + 6).head, b, 'to the start of the line below');
+});
+
+test('a ```js fence is prose, because the spec says two languages and no third', () => {
+  // Being wrong in the safe direction: a language nobody taught it keeps the
+  // markdown bindings, where guessing would quietly take the block motions away
+  // from a document that is mostly prose.
+  const doc = '# title\n\n```js\nlet a\nlet b\n```\n\nafter\n';
+  const b = doc.indexOf('let b');
+  // Past the start of its own line and all the way to the top of the block,
+  // which for a fence markdown does not understand is the ```js line itself.
+  assert.strictEqual(runChord(markdown, 'KeyJ ctrl', doc, b + 2).head, doc.indexOf('```js'),
+                     'it moved by block, as prose does');
+  // ...where a ```sh block, on the identical document, stops at the line.
+  const sh = doc.replace('```js', '```sh');
+  const sb = sh.indexOf('let b');
+  assert.strictEqual(runChord(markdown, 'KeyJ ctrl', sh, sb).head, sb - 1,
+                     'the one word of the info string is the whole of the difference');
 });
 
 test('everything above the line is inherited, so it is identical in both', () => {
