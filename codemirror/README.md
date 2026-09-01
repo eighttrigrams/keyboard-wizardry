@@ -8,8 +8,8 @@ another editor.
 editing* section of the top-level README together with the *Markdown editing*
 one: the motions and their selecting variants, the delete and line operations,
 page and document navigation, viewport centring, and a hand-rolled clipboard.
-47 chords on a markdown document, the same 47 on a text file or a shell script,
-31 on a one-line field. See *Four modes*.
+47 chords on a markdown document, the same 47 on a text file, a shell script or
+a Clojure source file, 31 on a one-line field. See *Five modes*.
 
 It was two sets for a while, because tracker had `ctrl+j` / `ctrl+l` as line start
 and end while blog had them as the markdown sentence motions. That turned out to
@@ -24,16 +24,17 @@ layout. rhizome and treina had tables of their own, word for word the same 47
 chords; they were deleted rather than merged, since there was nothing in them
 this does not do.)
 
-## Four modes
+## Five modes
 
-One layout on four shapes of document, which is not the same thing as four
+One layout on five shapes of document, which is not the same thing as five
 layouts:
 
 ```js
-install(view, commands)                    // 'markdown' — the default, 47 chords
-install(view, commands, {mode: 'text'})    // 'text'     — a .txt, the same 47
-install(view, commands, {mode: 'shell'})   // 'shell'    — a .sh, today == text
-install(view, commands, {mode: 'input'})   // 'input'    — one line, 31 chords
+install(view, commands)                     // 'markdown' — the default, 47 chords
+install(view, commands, {mode: 'text'})     // 'text'     — a .txt, the same 47
+install(view, commands, {mode: 'shell'})    // 'shell'    — a .sh, today == text
+install(view, commands, {mode: 'clojure'})  // 'clojure'  — a .clj, the same 47
+install(view, commands, {mode: 'input'})    // 'input'    — one line, 31 chords
 ```
 
 `'markdown'` is what every consumer had before modes existed, unchanged, and
@@ -43,13 +44,13 @@ never because a chord was reconsidered. There is no block in a `.txt`, so there
 is nothing for a block motion to move between; no second line in a field, so
 nothing to open or move or indent one.
 
-| | markdown | text | shell | input |
-|---|---|---|---|---|
-| `option+j` / `option+l` | word, or form inside a Clojure fence | word, plainly | word, plainly | word, plainly |
-| `option+i` / `option+k` | line, or in and out of a form | line | line | swallowed |
-| `ctrl+j` / `ctrl+l` | block start / end, or the line inside a shell-like fence | line start / end, then the neighbouring line | the same | the same, with no neighbouring line to reach |
-| `cmd+i` / `cmd+k` | up and down | up and down | up and down | swallowed |
-| lines, paging, scrolling | ✓ | ✓ | ✓ | — |
+| | markdown | text | shell | clojure | input |
+|---|---|---|---|---|---|
+| `option+j` / `option+l` | word, or form inside a Clojure fence | word, plainly | word, plainly | form, always | word, plainly |
+| `option+i` / `option+k` | line, or in and out of a form | line | line | in and out of a form | swallowed |
+| `ctrl+j` / `ctrl+l` | block start / end, or the line inside a shell-like fence | line start / end, then the neighbouring line | the same | block start / end — which here is the top-level form | line start / end, with no neighbouring line to reach |
+| `cmd+i` / `cmd+k` | up and down | up and down | up and down | up and down | swallowed |
+| lines, paging, scrolling | ✓ | ✓ | ✓ | ✓ | — |
 
 Eight chords separate markdown from text, and the other thirty-nine are the same
 command in both — by identity, and a test says so chord by chord. `ctrl+j` and
@@ -88,7 +89,7 @@ Both are **confined to the block**, so neither can step out onto the closing
 fence: `ctrl+j` at the top line of a `sh` block stays there rather than landing
 in the prose above it.
 
-**The modes are written as differences, not as four tables.** `sharedBindings` is
+**The modes are written as differences, not as five tables.** `sharedBindings` is
 everything true of any document at all; `multiLineBindings` adds what a second
 line makes possible and *is* text mode entire; markdown is that plus eight
 overrides, and shell is that plus nothing:
@@ -98,6 +99,7 @@ sharedBindings          char motions, deleting, clipboard, undo
   multiLineBindings     up and down, line ops, paging, scrolling  ← text
     markdownBindings    + blocks and fences
     shellBindings       + nothing, yet
+    clojureBindings     + the same eight, the fence question answered
   inputBindings         one line, eight chords swallowed
 ```
 
@@ -117,6 +119,43 @@ not stop inside `$FOO`. On that day `shellBindings` grows a body and every
 consumer that already says `'shell'` gets it. The alternative is finding every
 caller that said `'text'` and deciding, one at a time, which of them meant a
 shell script.
+
+### `'clojure'`: the file is the fence
+
+A `.clj`, `.cljs`, `.cljc` or `.edn`. It overrides the **same eight chords**
+markdown does, and to the same things — because markdown mode already knows how
+to edit Clojure, it just has to find a ```` ```clojure ```` block first. Here
+there is nothing to find: the file is the block. So this is not a fifth
+behaviour to learn, it is the behaviour the same hands already get inside a code
+block in a README, on a document that happens to be all code.
+
+Both halves follow from the one fact, that the document *is* Clojure:
+
+- **the option four** move by form, over the whole file. In markdown they are
+  `sexpAware()` — ask for the fence, move by form inside it, fall back to word
+  and line outside. There is no outside here, so the ask is gone and the bounds
+  are `0..length`. A test walks every offset of a Clojure body and asserts that
+  the file and the same text inside a fence land in the same place, chord for
+  chord.
+- **the ctrl pair** is the *block*, which in Clojure is the top-level form.
+  Markdown's is shell-fence-aware and a `.clj` has no fence, so what is left is
+  the block motion itself — and that works out because a Clojure file is written
+  with a blank line between top-level forms, which is exactly what `motions.js`
+  calls a block boundary.
+
+So the line motions move one modifier over: `cmd+j` / `cmd+l` are still the
+character, `option+j` / `option+l` are now the form. The one thing to be told is
+that `ctrl+j` is no longer the start of the *line* — coming from a `.txt` that is
+the difference you feel.
+
+Two known softnesses, both harmless. A Clojure line ending in two spaces reads as
+markdown's hard break, so `ctrl+l` goes to the next line rather than past the
+form — trailing whitespace, in other words. And two top-level forms with no blank
+line between them are one block, which is the honest reading of a file laid out
+that way: the motion is told where the blank lines are and nothing else.
+
+Nothing that *edits* structure is bound. `option+jkli` move; slurp, barf, drag
+and kill are not here, in a `.clj` any more than in a fence.
 
 The four vertical keys are **swallowed**, not left unbound, which is a choice
 worth knowing about. Bound to a no-op, `install` still preventDefaults them, so
@@ -153,14 +192,16 @@ The filter only ever sees transactions, so a state *created* with newlines in it
 doc is two lines and nothing was asked about it. `oneLine(text)` is that same
 flattening, exported for sanitising a document before it exists.
 
-## Structural editing, inside a fenced block
+## Structural editing, in a fenced block or a whole file
 
-Of *Structured LISP editing*, the four motions — and only inside a fenced
-`clojure`, `clj`, `cljs`, `cljc` or `edn` block in the document. There the four
-option keys move by form; anywhere else in the prose they are the word and line
-motions they always were, and there is nothing to turn on:
+Of *Structured LISP editing*, the four motions. In markdown mode they apply
+inside a fenced `clojure`, `clj`, `cljs`, `cljc` or `edn` block and nowhere else;
+anywhere else in the prose the four option keys are the word and line motions
+they always were, and there is nothing to turn on. In `'clojure'` mode they apply
+to the whole document, which is the same four functions with the file for
+bounds — see *`'clojure'`: the file is the fence*.
 
-| key | inside a Clojure fence | everywhere else |
+| key | inside a Clojure fence, or in a .clj | everywhere else |
 |---|---|---|
 | `option+l` | over the next form | word forward |
 | `option+j` | back over a form | word backward |
@@ -177,7 +218,9 @@ confined to part of a markdown document.
 What stands in for it, in `src/sexp.js`, is one pass that marks every character as
 code, string, comment or character literal; the motions then look only at code. So
 a `;` inside a string is not a comment, a paren inside a string is not a
-delimiter, and `\(` is neither. Movement never leaves the block.
+delimiter, and `\(` is neither. Movement never leaves the block — and in a
+`.clj`, where the block is the file, that is the same rule with nothing to bump
+into.
 
 `backwardUpSexp` and `backwardDownSexp` are implemented and exported but not
 bound to anything — one line each in the tables when they are wanted. Nothing
@@ -191,7 +234,7 @@ import {install, bindings, singleLine, oneLine,
 
 install(view, commands);            // the layout, onto a view you already made
 install(view, commands, {mode});    // ...in 'markdown' (default), 'text',
-                                    //    'shell' or 'input'
+                                    //    'shell', 'clojure' or 'input'
 bindings(commands, {mode});         // the table itself, to read or extend
 singleLine(cm);                     // extensions: a doc that stays one line
 oneLine(text);                      // that flattening, for a doc before it exists
@@ -202,7 +245,7 @@ fromTextareas(document, cm);        // ...onto every textarea[data-editor]
 An unknown mode throws rather than falling back to the markdown layout — falling
 back would put block motions and fence scanning in a search box and look very
 nearly right. Markdown is the default because it is what every caller that passes
-no mode has always got, and because it is the one of the four most forgiving to
+no mode has always got, and because it is the one of the five most forgiving to
 be wrong about: markdown in a text file costs a fence scan that finds nothing,
 where text in a markdown file silently loses the block motions.
 
@@ -238,16 +281,25 @@ terminal to sit in.
 
 ## Who uses it
 
-Six apps around `~/Workspace/plurama.eighttrigrams`, in two different ways,
+Nine apps around `~/Workspace/plurama.eighttrigrams`, in two different ways,
 because `plurama/Dockerfile` builds with that workspace as its context and **this
 library is outside it** — Docker cannot copy in what is not in the context.
 
 - **blog** — a `file:` dependency of `blog/scripts/zen-editor`, which bundles it
   together with CodeMirror into the one vendored file blog commits. blog runs no
   npm in the image at all, so that file is what ships.
-- **personalist**, **tracker**, **treina**, **music**, **rhizome** — these *do*
-  `npm install` inside an image, from their lockfiles, so each carries the library
-  **packed** (`npm pack`) in its own `vendor/`, depended on as `file:vendor/...tgz`.
+- **personalist**, **tracker**, **treina**, **music**, **rhizome**,
+  **cookbook**, **claude-coordinator** and the day-job fork
+  **claude-coordinator-lc** — these *do* `npm install` (in an image, or on the
+  machine) from their lockfiles, so each carries the library **packed**
+  (`npm pack`) in its own `vendor/`, depended on as `file:vendor/...tgz`.
+
+The two coordinator panels are the reason `'clojure'` mode exists: their middle
+pane edits the file the file tree is standing on, and what a coordinator stands
+on all day is `.clj`. The fork requires upstream's CodeMirror wrapper straight
+out of the other checkout, so it runs this library whether or not its own
+`package.json` says so — which is how it once came to be two versions behind, and
+why it is in the vendor script's list by path.
 
 Of those, tracker and rhizome show it only to users who asked for the keyboard
 scheme, in different ways: tracker keeps a plain textarea for everyone who has not

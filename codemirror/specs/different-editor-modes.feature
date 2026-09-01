@@ -1,4 +1,4 @@
-# A handful of examples of the four modes, as things you could sit and watch
+# A handful of examples of the five modes, as things you could sit and watch
 # happen. The reasoning lives beside this in different-editor-modes.md; only what
 # is observable is here.
 #
@@ -8,7 +8,7 @@
 
 Feature: The different editor modes of the ijkl-editor
 
-  The same chords on four shapes of document. What a mode changes, it changes
+  The same chords on five shapes of document. What a mode changes, it changes
   because the document is not that shape — never because a chord was
   reconsidered.
 
@@ -27,11 +27,12 @@ Feature: The different editor modes of the ijkl-editor
     When I press ctrl+j
     Then the caret is at the start of "<lands on>"
 
-    Examples: the block is markdown's alone
+    Examples: the block is markdown's, and Clojure's
       | kind          | lands on |
       | markdown file | alpha    |
       | text file     | beta     |
       | shell script  | beta     |
+      | clojure file  | alpha    |
 
   Scenario: In a one-line field there is only ever the one beginning
     Given an input field holding "alpha beta gamma"
@@ -63,6 +64,35 @@ Feature: The different editor modes of the ijkl-editor
     When I press option+l
     Then the caret has moved forward by one word
 
+  Scenario: A Clojure file moves by form with no fence anywhere in it
+    Given a clojure file holding
+      """
+      (defn alpha [x]
+        (inc x))
+      """
+    And the caret just after "inc"
+    When I press option+l
+    Then the caret is just after "x"
+    # The same document in a text file moves one word. The same document inside
+    # a ```clojure block in a markdown file moves by form, exactly as here —
+    # which is the whole design: the file is the fence.
+
+  Scenario: The top-level form is what ctrl+j finds in a Clojure file
+    Given a clojure file holding
+      """
+      (defn alpha [x]
+        (inc x))
+
+      (defn beta [y]
+        (dec y))
+      """
+    And the caret just after "dec"
+    When I press ctrl+j
+    Then the caret is at the start of "(defn beta [y]"
+    # Not the start of the line, which is where a text file goes. A Clojure file
+    # is written with a blank line between top-level forms, so markdown's block
+    # is a top-level form and nothing new had to be defined.
+
   Scenario Outline: Every mode holds the same chord for the things every document has
     Given a <kind> holding "alpha beta"
     And the caret in the middle of "beta"
@@ -74,6 +104,7 @@ Feature: The different editor modes of the ijkl-editor
       | markdown file |
       | text file     |
       | shell script  |
+      | clojure file  |
       | input field   |
 
   Scenario Outline: What a file is decides the mode it opens in
@@ -93,8 +124,15 @@ Feature: The different editor modes of the ijkl-editor
       | site.conf.template  | shell |
       | .envrc              | shell |
 
+    Examples: Clojure
+      | file          | mode    |
+      | core.clj      | clojure |
+      | views.cljs    | clojure |
+      | protocol.cljc | clojure |
+      | deps.edn      | clojure |
+
   Scenario: A caller that names no mode gets markdown, as it always did
     Given an editor mounted without a mode
     Then it behaves exactly as it did before modes existed
-    # Six of the eight consumers name no mode. Modes arriving must not be
-    # something that happens to them.
+    # Most consumers name no mode. Modes arriving must not be something that
+    # happens to them.

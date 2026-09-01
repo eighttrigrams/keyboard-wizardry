@@ -22,6 +22,15 @@ Currently the following modes are supported
     - .gitignore, .dockerignore
     - for sh files etc.
     - currently behaves exactly like text editing
+5. Clojure - for Clojure source files
+    - *.clj, *.cljs, *.cljc, *.edn
+    - option + j/l/i/k move by form, over the whole file
+        - the same four motions markdown has inside a fenced clojure block,
+          with the file for bounds instead of the block
+    - ctrl + j and ctrl + l jump to beginnings and ends of blocks, as in markdown
+        - a Clojure file has a blank line between top-level forms, so a block
+          is a top-level form
+    - no structural editing (slurp, barf, drag, kill), only motion
 
 Implementation note: Try to make it such that shared behaviour is 
 modeled by inheritance. I.e. every editor supports the cmd+ijkl

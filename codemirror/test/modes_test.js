@@ -1,4 +1,4 @@
-// The four modes, and what makes them four rather than four copies.
+// The five modes, and what makes them five rather than five copies.
 //
 //   npm test
 //
@@ -14,7 +14,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert';
 import {bindings, markdownBindings, documentBindings, textBindings, shellBindings,
-        inputBindings, MARKDOWN, TEXT, SHELL, INPUT, DOCUMENT} from '../src/bindings.js';
+        clojureBindings, inputBindings,
+        MARKDOWN, TEXT, SHELL, CLOJURE, INPUT, DOCUMENT} from '../src/bindings.js';
 
 const called = [];
 
@@ -36,6 +37,7 @@ const cmds = stubCommands();
 const markdown = bindings(cmds, {mode: MARKDOWN});
 const text = bindings(cmds, {mode: TEXT});
 const shell = bindings(cmds, {mode: SHELL});
+const clojure = bindings(cmds, {mode: CLOJURE});
 const input = bindings(cmds, {mode: INPUT});
 
 // Enough of an EditorView for a command to run against: markdown's option four
@@ -113,6 +115,7 @@ test('the mode constants are what the strings say', () => {
   assert.strictEqual(MARKDOWN, 'markdown');
   assert.strictEqual(TEXT, 'text');
   assert.strictEqual(SHELL, 'shell');
+  assert.strictEqual(CLOJURE, 'clojure');
   assert.strictEqual(INPUT, 'input');
 });
 
@@ -186,7 +189,8 @@ test('shift+ctrl selects exactly as far as ctrl moves, in every mode', () => {
   // Not a separate definition: selectTo() is handed the same pure motion motion()
   // is, so the two cannot disagree about where the chord goes.
   const doc = 'alpha\nbeta\n\ngamma';
-  for (const [name, table] of [['text', text], ['shell', shell], ['markdown', markdown]]) {
+  for (const [name, table] of [['text', text], ['shell', shell], ['markdown', markdown],
+                              ['clojure', clojure]]) {
     for (const [move, select] of [['KeyJ ctrl', 'KeyJ ctrl+shift'],
                                   ['KeyL ctrl', 'KeyL ctrl+shift']]) {
       const at = doc.indexOf('beta') + 2;
@@ -304,7 +308,8 @@ test('input mode reaches the same ends of the line that a text file does', () =>
 test('no mode introduces a chord markdown does not have', () => {
   // The point of modes is one layout on four documents. A chord that exists only
   // in a .sh is a second layout to learn, which is the thing this avoids.
-  for (const [name, table] of [['text', text], ['shell', shell], ['input', input]]) {
+  for (const [name, table] of [['text', text], ['shell', shell], ['clojure', clojure],
+                              ['input', input]]) {
     const extra = Object.keys(table).filter(c => !(c in markdown));
     assert.deepStrictEqual(extra, [], name);
   }
@@ -313,7 +318,7 @@ test('no mode introduces a chord markdown does not have', () => {
 test('modifiers are spelled in the order chord() produces, in every mode', () => {
   const ORDER = ['alt', 'ctrl', 'meta', 'shift'];
   for (const [name, table] of [['markdown', markdown], ['text', text],
-                               ['shell', shell], ['input', input]]) {
+                               ['shell', shell], ['clojure', clojure], ['input', input]]) {
     for (const chord of Object.keys(table)) {
       const [, mods = ''] = chord.split(' ');
       const held = mods ? mods.split('+') : [];
@@ -325,7 +330,7 @@ test('modifiers are spelled in the order chord() produces, in every mode', () =>
 
 test('every chord in every mode is callable', () => {
   for (const [name, table] of [['markdown', markdown], ['text', text],
-                               ['shell', shell], ['input', input]]) {
+                               ['shell', shell], ['clojure', clojure], ['input', input]]) {
     for (const [chord, command] of Object.entries(table)) {
       assert.strictEqual(typeof command, 'function', `${name}: ${chord} is not callable`);
     }
@@ -338,7 +343,128 @@ test('the tables share no mutable state', () => {
   // table — and with four modes on one base, editing three.
   const a = textBindings(cmds);
   a['KeyJ meta'] = 'clobbered';
-  for (const build of [markdownBindings, textBindings, shellBindings, inputBindings]) {
+  for (const build of [markdownBindings, textBindings, shellBindings, clojureBindings,
+                       inputBindings]) {
     assert.notStrictEqual(build(cmds)['KeyJ meta'], 'clobbered', build.name);
   }
+});
+
+// --- clojure mode -----------------------------------------------------------
+//
+// The claim under all of these: a .clj is what a ```clojure block is a piece of.
+// So the tests are mostly *equalities* — with markdown inside a fence, with text
+// everywhere the document is not Clojure-shaped — and the one genuine difference
+// is that there is no outside to fall back to.
+
+test('a Clojure file has the same chords as every other document, all 47', () => {
+  assert.deepStrictEqual(Object.keys(clojure).sort(), Object.keys(markdown).sort());
+  assert.strictEqual(Object.keys(clojure).length, 47);
+});
+
+test('and it differs from a text file in exactly the eight markdown differs in', () => {
+  // Not a new list. Markdown adds blocks and fences to a text file; Clojure mode
+  // adds the same two things with the questions already answered, so the set of
+  // chords that had to change is the same set.
+  const differ = Object.keys(text).filter(c => !sameCommand(text[c], clojure[c]));
+  assert.deepStrictEqual(differ.sort(), [...MARKDOWN_ONLY].sort());
+});
+
+test('the option four move by form with no fence to find', () => {
+  // The document is bare Clojure — no backticks anywhere. Markdown mode finds no
+  // fence and falls back to word motion; Clojure mode moves by form, because the
+  // file is the block.
+  const doc = '(defn alpha [x]\n  (inc x))\n';
+  const at = doc.indexOf('inc') + 1;
+  assert.strictEqual(runChord(markdown, 'KeyL alt', doc, at).delegated, 'cursorGroupRight',
+                     'markdown, with no fence, is a text file');
+  const {delegated, head} = runChord(clojure, 'KeyL alt', doc, at);
+  assert.strictEqual(delegated, undefined, 'clojure delegated to nothing — it moved by form');
+  assert.strictEqual(head, doc.indexOf('inc') + 3, 'over the rest of `inc`');
+  assert.strictEqual(runChord(clojure, 'KeyL alt', doc, doc.indexOf('inc') + 3).head,
+                     doc.indexOf('x))') + 1, 'then over `x`');
+});
+
+test('...in both directions, and in and out of a list', () => {
+  // Calva's four senses, which is what the VSCode keymap binds and the reason
+  // these are the ones on these keys.
+  const doc = '(a (b c) d)';
+  assert.strictEqual(runChord(clojure, 'KeyJ alt', doc, doc.indexOf('d')).head, doc.indexOf('(b'),
+                     'option+j back over the previous form, list and all');
+  assert.strictEqual(runChord(clojure, 'KeyK alt', doc, 0).head, 1,
+                     'option+k down into the list');
+  assert.strictEqual(runChord(clojure, 'KeyI alt', doc, doc.indexOf('c')).head, doc.indexOf(') d') + 1,
+                     'option+i up and out of the inner one');
+});
+
+test('the file is the fence: inside a ```clojure block, markdown does what clojure mode does', () => {
+  // The whole design in one assertion. Markdown mode's option four are
+  // sexpAware(): find the fence, move by form inside it. Clojure mode is the
+  // same four with the bounds already known. So on the same code, at the same
+  // offset, they must land in the same place.
+  //
+  // The ctrl pair is deliberately not compared. Markdown's asks about a
+  // *shell-like* fence and a ```clojure block is not one, so in there it is
+  // still the block motion over the whole document — which is markdown being
+  // markdown, not a disagreement about Clojure.
+  const body = '(defn alpha [x]\n  (inc x))\n\n(defn beta [y]\n  (dec y))\n';
+  const fenced = '# a note\n\n```clojure\n' + body + '```\n\nafter\n';
+  const offset = fenced.indexOf(body);
+  for (const chord of ['KeyJ alt', 'KeyL alt', 'KeyI alt', 'KeyK alt']) {
+    for (let pos = 0; pos < body.length; pos++) {
+      const inFile = runChord(clojure, chord, body, pos).head;
+      const inFence = runChord(markdown, chord, fenced, offset + pos).head;
+      assert.strictEqual(inFence, inFile + offset,
+                         `${chord} at ${pos} differs between the file and the fence`);
+    }
+  }
+});
+
+test('the ctrl pair is the top-level form', () => {
+  // Which is markdown's block motion, unwrapped: a run of lines bounded by a
+  // blank line, and that is how a Clojure file is laid out. The caret inside the
+  // body of the second defn.
+  const doc = '(defn alpha [x]\n  (inc x))\n\n(defn beta [y]\n  (dec y))\n';
+  const at = doc.indexOf('dec') + 1;
+  assert.strictEqual(runChord(clojure, 'KeyJ ctrl', doc, at).head, doc.indexOf('(defn beta'),
+                     'back to the head of the form it is in');
+  assert.strictEqual(runChord(text, 'KeyJ ctrl', doc, at).head, doc.indexOf('  (dec'),
+                     '...where a text file goes to the start of the line');
+  const forward = doc.indexOf('inc') + 1;
+  assert.strictEqual(runChord(clojure, 'KeyL ctrl', doc, forward).head,
+                     runChord(markdown, 'KeyL ctrl', doc, forward).head,
+                     'forward, it is markdown mode exactly — there is no shell fence to find');
+});
+
+test('and shift+ctrl selects as far as the ctrl pair moves', () => {
+  const doc = '(defn alpha [x]\n  (inc x))\n\n(defn beta [y]\n  (dec y))\n';
+  const at = doc.indexOf('dec') + 1;
+  for (const [move, select] of [['KeyJ ctrl', 'KeyJ ctrl+shift'],
+                                ['KeyL ctrl', 'KeyL ctrl+shift']]) {
+    assert.strictEqual(runChord(clojure, select, doc, at).head,
+                       runChord(clojure, move, doc, at).head, select);
+  }
+});
+
+test('everything above the form is inherited, so it is identical to a text file', () => {
+  // Same list as the markdown/text one above, and the same reason: written once
+  // in the multi-line base. A fifth mode must not be a fifth copy of it.
+  const INHERITED = ['Enter shift', 'Enter meta',
+                     'KeyI ctrl+meta', 'KeyK ctrl+meta', 'KeyL ctrl+meta', 'KeyJ ctrl+meta',
+                     'KeyP alt+meta', 'Semicolon alt+meta',
+                     'KeyP alt+ctrl+meta', 'Semicolon alt+ctrl+meta',
+                     'KeyI alt+meta+shift', 'KeyK alt+meta+shift',
+                     'KeyI alt+meta', 'KeyK alt+meta',
+                     'Semicolon meta', 'Semicolon ctrl+meta',
+                     'KeyI meta', 'KeyK meta', 'KeyI meta+shift', 'KeyK meta+shift',
+                     'KeyJ meta', 'KeyL meta', 'KeyJ meta+shift', 'KeyL meta+shift',
+                     'KeyC alt', 'KeyV alt', 'KeyX alt', 'KeyA alt', 'Backquote alt'];
+  for (const chord of INHERITED) assertSameCommand(clojure[chord], text[chord], chord);
+});
+
+test('a string full of parentheses is a string, and the motions know it', () => {
+  // sexp.js classifies before it moves, so this is really a test that Clojure
+  // mode is using that and not a bracket counter. `"(("` is one atom.
+  const doc = '(a "((" b)';
+  assert.strictEqual(runChord(clojure, 'KeyL alt', doc, doc.indexOf('"')).head,
+                     doc.indexOf('"((" ') + 4, 'over the whole string');
 });

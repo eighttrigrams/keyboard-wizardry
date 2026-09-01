@@ -24,6 +24,10 @@
 //   'shell'     a shell script — .sh, .conf, a dot-rc file, an ignore file.
 //               Exactly 'text' today, and named all the same; see shellBindings
 //               for why that is not ceremony.
+//   'clojure'   a Clojure source file — .clj, .cljs, .cljc, .edn. The same 47
+//               chords again; the same eight that markdown overrides are
+//               overridden, and to the same things, because a .clj is what a
+//               ```clojure block is a piece of. 47 chords.
 //   'input'     one line, and only one — a title field, a search box. 31 chords.
 //
 // What a mode drops or changes, it drops or changes because *the document is not
@@ -47,6 +51,13 @@
 //                          shell-like, where the ctrl pair goes back to being the
 //                          ends of the line.
 //       shellBindings      ...+ nothing, yet.
+//       clojureBindings    ...+ the same eight markdown overrides, with the
+//                          fence question already answered. Markdown asks *am I
+//                          in a ```clojure block* and *am I in a shell-like
+//                          one*; in a .clj the answers are always yes and always
+//                          no, so the option four move by form over the whole
+//                          file and the ctrl pair is the block motion — which in
+//                          Clojure is the top-level form.
 //     inputBindings        ...when there is not: one line, and eight chords
 //                          swallowed.
 //
@@ -71,6 +82,7 @@ import {copySelection, pasteAtSelection, cutSelection,
 export const MARKDOWN = 'markdown';
 export const TEXT = 'text';
 export const SHELL = 'shell';
+export const CLOJURE = 'clojure';
 export const INPUT = 'input';
 
 // The name markdown mode went by when it was the only document mode there was,
@@ -167,6 +179,28 @@ const lineBack = motion(lineStartOrPrevEnd);
 const lineForward = motion(lineEndOrNextStart);
 const selectLineBack = selectTo(lineStartOrPrevEnd);
 const selectLineForward = selectTo(lineEndOrNextStart);
+
+// A sexp motion, over the whole document rather than over a fence in one. The
+// four take (text, pos, from, to) because in markdown they are confined to the
+// block they were found in; a Clojure *file* is that block, so the bounds are
+// the document and this is a pure (text, pos) -> pos like every other motion
+// here — which is what lets motion() and selectTo() put it on the keys with no
+// second mechanism.
+const overTheFile = sexp => (text, pos) => sexp(text, pos, 0, text.length);
+
+const sexpBack = motion(overTheFile(backwardSexp));
+const sexpForward = motion(overTheFile(forwardSexp));
+const sexpUp = motion(overTheFile(forwardUpSexp));
+const sexpDown = motion(overTheFile(forwardDownSexp));
+
+// The block pair, unwrapped. Markdown's asks about a shell-like fence first and
+// falls back to these; a Clojure file has no fence to ask about, so these are
+// what is left — the same two pure motions, on the same keys, reached without a
+// scan that can only answer no.
+const blockBack = motion(sentenceStart);
+const blockForward = motion(sentenceEnd);
+const selectBlockBack = selectTo(sentenceStart);
+const selectBlockForward = selectTo(sentenceEnd);
 
 const proseBack = motion(inShellFence(lineStartOrPrevEnd, sentenceStart));
 const proseForward = motion(inShellFence(lineEndOrNextStart, sentenceEnd));
@@ -355,6 +389,56 @@ export function shellBindings(commands) {
   return multiLineBindings(commands);
 }
 
+// A Clojure source file — .clj, .cljs, .cljc, .edn.
+//
+// **The same eight chords markdown overrides, and no ninth**, which is the whole
+// claim: markdown mode already knows how to edit Clojure, it just has to find a
+// ```clojure fence first. Here the file is the fence. So this is not a fifth
+// behaviour to learn — it is the behaviour the same hands already get inside a
+// code block in a README, on a document that happens to be all code.
+//
+// Both halves of that follow from one fact, that the document *is* Clojure:
+//
+//   the option four   move by form, over the whole file. In markdown these are
+//                     sexpAware(): ask for the fence, move by form inside it,
+//                     fall back to word and line outside. There is no outside
+//                     here, so the ask is gone and the bounds are 0..length.
+//                     The senses stay Calva's, as they are in a fence.
+//   the ctrl pair     the *block*, which in a Clojure file is the top-level
+//                     form. Markdown's is fence-aware — a shell-like block gets
+//                     the line motions, because in a listing "the end of this
+//                     block" is the far side of the whole thing — and a .clj has
+//                     no fence to find, so what is left is the block motion
+//                     itself. That works out because a Clojure file is written
+//                     with a blank line between top-level forms, which is
+//                     exactly what motions.js calls a block boundary.
+//
+// The line motions are still there, one modifier away: cmd+j and cmd+l are the
+// character, alt+j and alt+l are now the form. What is *not* here is a line
+// motion on the ctrl pair, which is the one thing a reader who was in a .txt a
+// moment ago has to be told.
+//
+// Two known softnesses, both of which degrade to something harmless rather than
+// to something wrong. A Clojure line that happens to end in two spaces reads as
+// markdown's hard break, so ctrl+l goes to the next line rather than past the
+// form — trailing whitespace, in other words, and the file is worse for other
+// reasons. And a top-level form written without a blank line after it is one
+// block with its neighbour, which is the honest reading of a file laid out that
+// way: the motion is told where the blank lines are and nothing else.
+export function clojureBindings(commands) {
+  return Object.assign(multiLineBindings(commands), {
+    'KeyJ alt': sexpBack,
+    'KeyL alt': sexpForward,
+    'KeyI alt': sexpUp,
+    'KeyK alt': sexpDown,
+
+    'KeyJ ctrl': blockBack,
+    'KeyL ctrl': blockForward,
+    'KeyJ ctrl+shift': selectBlockBack,
+    'KeyL ctrl+shift': selectBlockForward
+  });
+}
+
 // One line: a title, a search box, a URL. Pair it with singleLine() from
 // single-line.js, which is what stops the document becoming two lines behind the
 // layout's back.
@@ -401,6 +485,7 @@ const LAYOUTS = {
   [MARKDOWN]: markdownBindings,
   [TEXT]: textBindings,
   [SHELL]: shellBindings,
+  [CLOJURE]: clojureBindings,
   [INPUT]: inputBindings,
   [DOCUMENT]: markdownBindings
 };
@@ -412,6 +497,7 @@ const LAYOUTS = {
 //   bindings(commands)                       the markdown layout
 //   bindings(commands, {mode: 'text'})       a text file
 //   bindings(commands, {mode: 'shell'})      a shell script
+//   bindings(commands, {mode: 'clojure'})    a Clojure source file
 //   bindings(commands, {mode: 'input'})      a one-line field
 //
 // **Markdown is the default, and that is not only history.** It is what every
@@ -427,7 +513,8 @@ export function bindings(commands, options) {
   // put block motions and fence scanning in a search box and look almost right.
   if (!layout) {
     throw new Error(`unknown editor mode ${JSON.stringify(mode)} — expected one of ` +
-                    [MARKDOWN, TEXT, SHELL, INPUT].map(m => JSON.stringify(m)).join(', '));
+                    [MARKDOWN, TEXT, SHELL, CLOJURE, INPUT]
+                      .map(m => JSON.stringify(m)).join(', '));
   }
   return layout(commands);
 }
