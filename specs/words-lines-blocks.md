@@ -9,6 +9,42 @@ The [core](core.md) is prerequisite for basic cursor movements
 - ctrl+j move to beginning of line
 - ctrl+l move to end of line
 
+```
+ctrl+j   → the start of the line
+  alpha                     alpha
+  be|ta                 →   |beta
+  gamma                     gamma
+
+ctrl+j   pressed there again → the end of the line above
+  alpha                     alpha|
+  |beta                 →   beta
+  gamma                     gamma
+
+ctrl+l   → the end of the line
+  alpha                     alpha
+  be|ta                 →   beta|
+  gamma                     gamma
+
+ctrl+l   pressed there again → the start of the line below
+  alpha                     alpha
+  beta|                 →   beta
+  gamma                     |gamma
+
+ctrl+j at the start of the document, ctrl+l at its end → they stay
+  |alpha                →   |alpha
+  beta|                     beta|
+
+on an empty line the caret is at both ends already → ctrl+j leaves it
+  alpha                     alpha|
+  |                     →
+  gamma                     gamma
+
+...and so does ctrl+l
+  alpha                     alpha
+  |                     →
+  gamma                     |gamma
+```
+
 TODO consider ctrl+option commands to navigate sentence-wise (also for Markdown)
 
 # Markdown editing
