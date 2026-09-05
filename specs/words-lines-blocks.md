@@ -6,8 +6,7 @@ The [core](core.md) is prerequisite for basic cursor movements
 
 # Normal text file editing
 
-- ctrl+j move to beginning of line
-- ctrl+l move to end of line
+- ctrl+j/l - Move to beginning or end of lines
 
 ```
 ctrl+j   → the start of the line
