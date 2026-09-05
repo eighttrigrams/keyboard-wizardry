@@ -45,28 +45,9 @@ on MacOS as well as Ubuntu, but that is a war story for another day.
 
 # The core
 
-- cmd+i cursor up
-- cmd+k cursor down
-- cmd+j cursor left
-- cmd+l cursor right
-- option+j wordwise backward
-- option+l wordwise forward
+See [core](specs/core.md)
 
-# Normal editing
-
-- ^ - undo
-- shift+^ - redo
 - cmd+9 - save
-- cmd+0 cmd+0 - save all and exit
-- ctrl+option+cmd+p go to top
-- ctrl+option+cmd+ö go to bottom
-- option+cmd+i cursor up, scroll buffer 1 line down
-- option+cmd+k cursor down, scroll buffer 1 line up
-- option+ö center cursor vertically
-- ctrl-option+ö center current line vertically
-- cmd+p jump to line
-- option+cmd+i page up, w/ cursor centered vertically
-- option+cmd+k page down, w/ cursor centered vertically
 
 # Markdown editing
 
@@ -91,6 +72,21 @@ on MacOS as well as Ubuntu, but that is a war story for another day.
 - control+option+k - backward down list
 - option+delete - kill form leftward (backward-kill-sexp)
 - option+´ - kill form rightward (kill-sexp)
+
+# Editor controls for VSCode
+
+- ^ - undo
+- shift+^ - redo
+- cmd+0 cmd+0 - save all and exit
+- ctrl+option+cmd+p go to top
+- ctrl+option+cmd+ö go to bottom
+- option+cmd+i cursor up, scroll buffer 1 line down
+- option+cmd+k cursor down, scroll buffer 1 line up
+- option+ö center cursor vertically
+- ctrl-option+ö center current line vertically
+- cmd+p jump to line
+- option+cmd+i page up, w/ cursor centered vertically
+- option+cmd+k page down, w/ cursor centered vertically
 
 # VSCode
 
